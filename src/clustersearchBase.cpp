@@ -1,6 +1,8 @@
 #include "Command.h"
 #include "LocalCommandDeclarations.h"
 #include "LocalParameters.h"
+#include "Prefiltering.h"
+#include "DownloadDatabase.h"
 
 const char* binary_name = "clustersearch";
 const char* tool_name = "clustersearch";
@@ -8,7 +10,13 @@ const char* tool_introduction = "clustersearch is a tool to discover conserved g
 const char* main_author = "Ruoshi Zhang <ruoshi.zhang@mpinat.mpg.de>";
 const char* show_extended_help = "1";
 const char* show_bash_info = NULL;
+extern const char* MMSEQS_CURRENT_INDEX_VERSION;
+const char* index_version_compatible = MMSEQS_CURRENT_INDEX_VERSION;
 bool hide_base_commands = true;
+void (*validatorUpdate)(void) = 0;
+std::vector<DatabaseDownload> externalDownloads = {};
+std::vector<KmerThreshold> externalThreshold = {};
+bool hide_base_downloads = false;
 
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 std::vector<Command> commands = {
