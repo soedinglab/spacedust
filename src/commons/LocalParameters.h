@@ -27,6 +27,7 @@ public:
     std::vector<MMseqsParameter*> clusterhits;
     std::vector<MMseqsParameter*> foldseeksearch;
 
+    PARAMETER(PARAM_CLUSTERSEARCH_MODE)
     PARAMETER(PARAM_FILTER_SELF_MATCH)
     PARAMETER(PARAM_MULTIHIT_PVAL)
     PARAMETER(PARAM_CLUSTER_PVAL)
@@ -37,6 +38,7 @@ public:
     PARAMETER(PARAM_GFF_DIR)
 
 
+    int clusterSearchMode;
     float pMHThr;
     float pCluThr;
     bool clusterUseWeight;
@@ -49,6 +51,7 @@ public:
 private:
     LocalParameters() : 
         Parameters(),
+        PARAM_CLUSTERSEARCH_MODE(PARAM_CLUSTERSEARCH_MODE_ID, "--search-mode", "Cluster Search Mode", "0: sequence search with MMseqs2, 1: structure comparison with Foldseek", typeid(int), (void *) &clusterSearchMode, "^[0-1]{1}"),
         PARAM_FILTER_SELF_MATCH(PARAM_FILTER_SELF_MATCH_ID, "--filter-self-match", "Filter self match", "Remove hits between the same set. 0: do not filter, 1: filter", typeid(bool), (void *) &filterSelfMatch, ""),
         PARAM_MULTIHIT_PVAL(PARAM_MULTIHIT_PVAL_ID, "--multihit-pval", "Multihit P-value cutoff", "Multihit P-value threshold for cluster match output", typeid(float), (void *) &pMHThr, "^0(\\.[0-9]+)?|^1(\\.0+)?$"),
         PARAM_CLUSTER_PVAL(PARAM_CLUSTER_PVAL_ID, "--cluster-pval", "Clustering and Ordering P-value cutoff","Clustering and Ordering P-value threshold for cluster match output", typeid(float), (void *) &pCluThr, "^0(\\.[0-9]+)?|^1(\\.0+)?$"),
@@ -108,6 +111,7 @@ private:
         clustersearchworkflow = combineList(clustersearchworkflow, combinehits);
         clustersearchworkflow = combineList(clustersearchworkflow, clusterhits);
         clustersearchworkflow.push_back(&PARAM_PROFILE_CLUSTER_SEARCH);
+        clustersearchworkflow.push_back(&PARAM_CLUSTERSEARCH_MODE);
 
         //aa2foldseek
         aa2foldseek = combineList(prefilter, align);
@@ -122,7 +126,7 @@ private:
         iterativeclusearchworkflow = combineList(iterativeclusearchworkflow, combinehits);
         iterativeclusearchworkflow = combineList(iterativeclusearchworkflow, clusterhits);
 
-
+        clusterSearchMode = 0;
         filterSelfMatch = 0;
         maxGeneGaps = 3;
         clusterSize = 2;

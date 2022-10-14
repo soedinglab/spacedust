@@ -23,7 +23,10 @@ OUTPUT="$3"
 TMP_PATH="$4"
 FOLDSEEK="$(pwd)"/foldseek/bin/foldseek
 
-[ ! -f "$FOLDSEEK" ] && echo "Please make sure Foldseek is installed in the working directory"
+if [ -n "${USE_FOLDSEEK}" ]; then 
+    [ -n "${USE_PROFILE}" ] && echo "Profile cluster search with Foldseek is not supported." && exit 1;
+    [ ! -f "$FOLDSEEK" ] && echo "Please make sure Foldseek is installed in the working directory." && exit 1;
+fi
 
 if [ -n "${USE_PROFILE}" ]; then
     if notExists "${TARGET}_clu.index"; then
@@ -65,9 +68,15 @@ if [ -n "${USE_PROFILE}" ]; then
 
 else
     if notExists "${TMP_PATH}/result.index"; then
-        # shellcheck disable=SC2086
-        "${FOLDSEEK}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
-            || fail "foldseek search failed"
+        if [ -n "${USE_FOLDSEEK}" ]; then
+            # shellcheck disable=SC2086
+            "${FOLDSEEK}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
+                || fail "foldseek search failed"
+        else
+            # shellcheck disable=SC2086
+            "${MMSEQS}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${SEARCH_PAR} \
+                || fail "mmseqs search failed"
+        fi
     fi
 fi
 

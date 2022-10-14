@@ -83,6 +83,7 @@ int clustersearch(int argc, const char **argv, const Command &command) {
         cmd.addVariable("REMOVE_TMP", "TRUE");
     }
     cmd.addVariable("USE_PROFILE", par.profileClusterSearch == 1 ? "TRUE" : NULL);
+    cmd.addVariable("USE_FOLDSEEK", par.clusterSearchMode == 1 ? "TRUE" : NULL);
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clusterworkflow).c_str());
     std::vector<MMseqsParameter*> searchwithoutnumiter;
     for (size_t i = 0; i < par.clustersearchworkflow.size(); i++) {
