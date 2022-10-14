@@ -36,8 +36,8 @@ To enable structure comparisons, clustersearch requires the installation of [Fol
 
 <!-- * `easy-clustersearch`     search for conserved gene clusters between genomes (fasta/db) -->
 * `createsetdb`       create sequence database from FASTA input
-* `clustersearch`   search for conserved gene clusters between genomes (DB)
-* `iterativeclustersearch`  search for conserved gene clusters between genomes (DB) using iterative searches (PSI-BLAST like)
+* `clustersearch`   search for conserved gene clusters between genomes (using PSI-BLAST like iterative searches)
+<!-- * `iterativeclustersearch`  search for conserved gene clusters between genomes (DB) using iterative searches (PSI-BLAST like) -->
 * `aa2foldseek` convert a sequence database to structure database by mapping to Uniprot/Alphafold
 
 ### Important parameters
@@ -45,7 +45,9 @@ To enable structure comparisons, clustersearch requires the installation of [Fol
     # createsetdb
     --gff-type                             Type in the GFF file to filter by
     --gff-dir                              Path to gff dir file
+
     # clustersearch
+    --search-mode                          0: sequence search with MMseqs2, 1: structure comparison with Foldseek (default:0)
     --num-iterations                       Number of iterative profile search iterations
     --profile-cluster-search               Perform profile(target)-sequence searches
     --filter-self-match                    Remove hits between the same set
@@ -75,16 +77,19 @@ To enable protein structure search with Foldseek, the protein sequences are mapp
 
 ### Clustersearch and iterative clustersearch
 
-Clustersearch will first conduct an all-against-all homology search/structure comparison between two sets of protein-coding genes derived from multiple genomes, and then find clusters of homologous hits based on conservation of gene neighborhood. For a more sensitive search, iterative searches like PSI-BLAST can be done with `iterativeclustersearch` with iterations set by `--num-iteration`.
+Clustersearch will first conduct an all-against-all homology search/structure comparison between two sets of protein-coding genes derived from multiple genomes, and then find clusters of homologous hits based on conservation of gene neighborhood. Structure comparison with Foldseek is invoked by `--search-mode 1`. For a more sensitive search, iterative searches in MMseqs2 and Foldseek can be done by setting `--num-iterations`.
 
-    # Search querySetDB against targetSetDB (using MMseqs or Foldseek)
+    # Search querySetDB against targetSetDB (using MMseqs)
     clustersearch clustersearch querySetDB targetSetDB resultDB tmpFolder
 
     # Search querySetDB against targetSetDB turned into profile
     clustersearch clustersearch querySetDB targetSetDB resultDB tmpFolder --profile-cluster-search
 
     # Iterative cluster search (like PSI-BLAST) with 2 iterations
-    clustersearch iterativeclustersearch querySetDB targetSetDB resultDB tmpFolder --num-iteration 2
+    clustersearch clustersearch querySetDB targetSetDB resultDB tmpFolder --num-iterations 2
+
+    # Search querySetDB against targetSetDB (using Foldseek)
+    clustersearch clustersearch querySetDB targetSetDB resultDB tmpFolder --search-mode 1
 
 ### The Clustersearch output
 
