@@ -95,6 +95,7 @@ private:
         foldseeksearch.push_back(&PARAM_ADD_BACKTRACE);
         foldseeksearch.push_back(&PARAM_C);
         foldseeksearch.push_back(&PARAM_COV_MODE);
+        foldseeksearch.push_back(&PARAM_NUM_ITERATIONS);
         foldseeksearch.push_back(&PARAM_THREADS);
         foldseeksearch.push_back(&PARAM_COMPRESSED);
         foldseeksearch.push_back(&PARAM_V);
