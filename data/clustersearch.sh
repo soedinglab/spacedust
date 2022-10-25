@@ -116,7 +116,13 @@ if [ -n "${REMOVE_TMP}" ]; then
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
     # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/result_prefixed" ${VERBOSITY}
+    # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/aggregate_merged" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/matches" ${VERBOSITY}
     rm -f "${TMP_PATH}/clustersearch.sh"
 fi
 
