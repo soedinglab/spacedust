@@ -37,7 +37,6 @@ To enable structure comparisons, clustersearch requires the installation of [Fol
 <!-- * `easy-clustersearch`     search for conserved gene clusters between genomes (fasta/db) -->
 * `createsetdb`       create sequence database from FASTA input
 * `clustersearch`   search for conserved gene clusters between genomes (using PSI-BLAST like iterative searches)
-<!-- * `iterativeclustersearch`  search for conserved gene clusters between genomes (DB) using iterative searches (PSI-BLAST like) -->
 * `aa2foldseek` convert a sequence database to structure database by mapping to Uniprot/Alphafold
 
 ### Important parameters
@@ -48,7 +47,7 @@ To enable structure comparisons, clustersearch requires the installation of [Fol
 
     # clustersearch
     --search-mode                          0: sequence search with MMseqs2, 1: structure comparison with Foldseek (default:0)
-    --num-iterations                       Number of iterative profile search iterations
+    --num-iterations                       Number of iterative profile search iterations (default:1)
     --profile-cluster-search               Perform profile(target)-sequence searches
     --filter-self-match                    Remove hits between the same set
     --max-gene-gap                         Maximum number of genes allowed between two clusters to merge (default:3)
@@ -75,7 +74,7 @@ To enable protein structure search with Foldseek, the protein sequences are mapp
     # Convert to structure sequence DB
     clustersearch aa2foldseek setDB refFoldseekDB outDB tmpFolder
 
-### Clustersearch and iterative clustersearch
+### Clustersearch (with MMseqs2 or Foldseek)
 
 Clustersearch will first conduct an all-against-all homology search/structure comparison between two sets of protein-coding genes derived from multiple genomes, and then find clusters of homologous hits based on conservation of gene neighborhood. Structure comparison with Foldseek is invoked by `--search-mode 1`. For a more sensitive search, iterative searches in MMseqs2 and Foldseek can be done by setting `--num-iterations`.
 
