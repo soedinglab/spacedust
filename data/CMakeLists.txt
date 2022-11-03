@@ -3,7 +3,6 @@ include(MMseqsResourceCompiler)
 set(COMPILED_RESOURCES
         createsetdb.sh
         clustersearch.sh
-        iterativeclustersearch.sh
         aa2foldseek.sh
         )
 

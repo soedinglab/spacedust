@@ -21,7 +21,6 @@ public:
     std::vector<MMseqsParameter*> createsetdb; 
     std::vector<MMseqsParameter*> aa2foldseek;    
     std::vector<MMseqsParameter*> clustersearchworkflow;
-    std::vector<MMseqsParameter*> iterativeclusearchworkflow;
     std::vector<MMseqsParameter*> besthitbyset;
     std::vector<MMseqsParameter*> combinehits;
     std::vector<MMseqsParameter*> clusterhits;
@@ -120,12 +119,6 @@ private:
         aa2foldseek.push_back(&PARAM_THREADS);
         aa2foldseek.push_back(&PARAM_V);
 
-        // iterative cluster search
-        iterativeclusearchworkflow = combineList(searchworkflow, besthitbyset);
-        iterativeclusearchworkflow = combineList(iterativeclusearchworkflow, mergedbs);
-        iterativeclusearchworkflow = combineList(iterativeclusearchworkflow, subtractdbs);
-        iterativeclusearchworkflow = combineList(iterativeclusearchworkflow, combinehits);
-        iterativeclusearchworkflow = combineList(iterativeclusearchworkflow, clusterhits);
 
         clusterSearchMode = 0;
         filterSelfMatch = 0;
