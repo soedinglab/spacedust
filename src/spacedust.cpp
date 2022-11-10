@@ -4,9 +4,9 @@
 #include "Prefiltering.h"
 #include "DownloadDatabase.h"
 
-const char* binary_name = "clustersearch";
-const char* tool_name = "clustersearch";
-const char* tool_introduction = "clustersearch is a tool to discover conserved gene clusters between any pairs of contig/genomes";
+const char* binary_name = "spacedust";
+const char* tool_name = "spacedust";
+const char* tool_introduction = "Spacedust is a tool to discover conserved gene clusters between any pairs of contig/genomes";
 const char* main_author = "Ruoshi Zhang <ruoshi.zhang@mpinat.mpg.de>";
 const char* show_extended_help = "1";
 const char* show_bash_info = NULL;

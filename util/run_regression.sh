@@ -4,14 +4,14 @@ fail() {
     exit 1
 }
 
-CLUSTERSEARCH="$1"
+SPACEDUST="$1"
 DATA="$2"
 BASEDIR="$3"
 
 mkdir -p "${BASEDIR}"
 
-"${CLUSTERSEARCH}" createsetdb ${DATA}/*.faa "${BASEDIR}/genome" "${BASEDIR}/tmp"
-"${CLUSTERSEARCH}" clustersearch "${BASEDIR}/genome" "${BASEDIR}/genome" "${BASEDIR}/result" "${BASEDIR}/tmp" --filter-self-match
+"${SPACEDUST}" createsetdb ${DATA}/*.faa "${BASEDIR}/genome" "${BASEDIR}/tmp"
+"${SPACEDUST}" clustersearch "${BASEDIR}/genome" "${BASEDIR}/genome" "${BASEDIR}/result" "${BASEDIR}/tmp" --filter-self-match
 
 
 awk 'END{print NR}' "${BASEDIR}/result" | grep -q 139 \

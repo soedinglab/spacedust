@@ -4,17 +4,17 @@ add_subdirectory(util)
 add_subdirectory(version)
 add_subdirectory(workflow)
 
-add_executable(clustersearch
+add_executable(spacedust
         ${commons_source_files}
         ${util_header_files}
         ${util_source_files}
         ${workflow_source_files}
         LocalCommandDeclarations.h
-        clustersearchBase.cpp
+        spacedust.cpp
         )
-mmseqs_setup_derived_target(clustersearch)
-target_link_libraries(clustersearch version)
+mmseqs_setup_derived_target(spacedust)
+target_link_libraries(spacedust version)
 
-add_dependencies(clustersearch local-generated)
+add_dependencies(spacedust local-generated)
 
-install(TARGETS clustersearch DESTINATION bin)
+install(TARGETS spacedust DESTINATION bin)

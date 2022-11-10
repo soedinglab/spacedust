@@ -3,7 +3,7 @@
  
 #include <Parameters.h>
 
-const int CITATION_CLUSTERSEARCH = CITATION_END;
+const int CITATION_SPACEDUST = CITATION_END;
 
 class LocalParameters : public Parameters {
 public:
@@ -130,8 +130,8 @@ private:
         profileClusterSearch = 0;
         gffDir = "";
 
-        
-        citations.emplace(CITATION_CLUSTERSEARCH, "");
+        //TODO: add citations (foldseek & mmseqs & clustersearch)
+        citations.emplace(CITATION_SPACEDUST, "");
     }
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};

@@ -68,17 +68,17 @@ jobs:
           fi
 
           make -j $(nproc --all)
-        displayName: Build Clustersearch
+        displayName: Build Spacedust
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./util/run_regression.sh ./build/src/clustersearch examples EVAL
+          ./util/run_regression.sh ./build/src/spacedust examples EVAL
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         condition: eq(variables['STATIC'], 1)
         inputs:
-          targetPath: $(Build.SourcesDirectory)/build/src/clustersearch
-          artifactName: clustersearch-linux-$(SIMD)
+          targetPath: $(Build.SourcesDirectory)/build/src/spacedust
+          artifactName: spacedust-linux-$(SIMD)
 
   - job: build_ubuntu_cross_2004
     displayName: Ubuntu 2004 Cross-Compile
@@ -123,11 +123,11 @@ jobs:
             -static-libstdc++" -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
             -DENABLE_WERROR=1 -DHAVE_${SIMD}=1 ..
           make -j $(nproc --all)
-        displayName: Build Clustersearch
+        displayName: Build Spacedust
       - task: PublishPipelineArtifact@0
         inputs:
-          targetPath: $(Build.SourcesDirectory)/build/src/clustersearch
-          artifactName: clustersearch-linux-$(SIMD)
+          targetPath: $(Build.SourcesDirectory)/build/src/spacedust
+          artifactName: spacedust-linux-$(SIMD)
 
   - job: build_macos_11
     displayName: macOS 11
@@ -140,17 +140,17 @@ jobs:
         displayName: Use Xcode 12.2
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./lib/mmseqs/util/build_osx.sh . build clustersearch
-        displayName: Build Clustersearch
+          ./lib/mmseqs/util/build_osx.sh . build spacedust
+        displayName: Build Spacedust
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
-          ./util/run_regression.sh ./build/clustersearch examples EVAL
+          ./util/run_regression.sh ./build/spacedust examples EVAL
         displayName: Run Regression Suite
         condition: eq(variables['regression'], 1)
       - task: PublishPipelineArtifact@0
         inputs:
-          targetPath: $(Build.SourcesDirectory)/build/clustersearch
-          artifactName: clustersearch-darwin-universal
+          targetPath: $(Build.SourcesDirectory)/build/spacedust
+          artifactName: spacedust-darwin-universal
 
   - job: upload_artifacts
     displayName: Upload Artifacts
@@ -164,96 +164,96 @@ jobs:
     steps:
       - script: |
           cd "${BUILD_SOURCESDIRECTORY}"
-          mkdir clustersearch
-          cp -f README.md LICENCE.md clustersearch
-          mkdir clustersearch/bin
+          mkdir spacedust
+          cp -f README.md LICENCE.md spacedust
+          mkdir spacedust/bin
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: clustersearch-darwin-universal
-          targetPath: $(Build.SourcesDirectory)/clustersearch/bin
+          artifactName: spacedust-darwin-universal
+          targetPath: $(Build.SourcesDirectory)/spacedust/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/clustersearch/bin/clustersearch"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacedust/bin/spacedust"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/clustersearch
-          archiveFile: $(Build.SourcesDirectory)/clustersearch-osx-universal.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacedust
+          archiveFile: $(Build.SourcesDirectory)/spacedust-osx-universal.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: clustersearch-linux-SSE2
-          targetPath: $(Build.SourcesDirectory)/clustersearch/bin
+          artifactName: spacedust-linux-SSE2
+          targetPath: $(Build.SourcesDirectory)/spacedust/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/clustersearch/bin/clustersearch"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacedust/bin/spacedust"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/clustersearch
-          archiveFile: $(Build.SourcesDirectory)/clustersearch-linux-sse2.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacedust
+          archiveFile: $(Build.SourcesDirectory)/spacedust-linux-sse2.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: clustersearch-linux-SSE4_1
-          targetPath: $(Build.SourcesDirectory)/clustersearch/bin
+          artifactName: spacedust-linux-SSE4_1
+          targetPath: $(Build.SourcesDirectory)/spacedust/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/clustersearch/bin/clustersearch"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacedust/bin/spacedust"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/clustersearch
-          archiveFile: $(Build.SourcesDirectory)/clustersearch-linux-sse41.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacedust
+          archiveFile: $(Build.SourcesDirectory)/spacedust-linux-sse41.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: clustersearch-linux-AVX2
-          targetPath: $(Build.SourcesDirectory)/clustersearch/bin
+          artifactName: spacedust-linux-AVX2
+          targetPath: $(Build.SourcesDirectory)/spacedust/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/clustersearch/bin/clustersearch"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacedust/bin/spacedust"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/clustersearch
-          archiveFile: $(Build.SourcesDirectory)/clustersearch-linux-avx2.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacedust
+          archiveFile: $(Build.SourcesDirectory)/spacedust-linux-avx2.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: clustersearch-linux-ARM8
-          targetPath: $(Build.SourcesDirectory)/clustersearch/bin
+          artifactName: spacedust-linux-ARM8
+          targetPath: $(Build.SourcesDirectory)/spacedust/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/clustersearch/bin/clustersearch"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacedust/bin/spacedust"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/clustersearch
-          archiveFile: $(Build.SourcesDirectory)/clustersearch-linux-arm64.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacedust
+          archiveFile: $(Build.SourcesDirectory)/spacedust-linux-arm64.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: clustersearch-linux-POWER8
-          targetPath: $(Build.SourcesDirectory)/clustersearch/bin
+          artifactName: spacedust-linux-POWER8
+          targetPath: $(Build.SourcesDirectory)/spacedust/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/clustersearch/bin/clustersearch"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacedust/bin/spacedust"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/clustersearch
-          archiveFile: $(Build.SourcesDirectory)/clustersearch-linux-ppc64le-POWER8.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacedust
+          archiveFile: $(Build.SourcesDirectory)/spacedust-linux-ppc64le-POWER8.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadPipelineArtifact@1
         inputs:
-          artifactName: clustersearch-linux-POWER9
-          targetPath: $(Build.SourcesDirectory)/clustersearch/bin
+          artifactName: spacedust-linux-POWER9
+          targetPath: $(Build.SourcesDirectory)/spacedust/bin
       - script:
-          chmod +x "${BUILD_SOURCESDIRECTORY}/clustersearch/bin/clustersearch"
+          chmod +x "${BUILD_SOURCESDIRECTORY}/spacedust/bin/spacedust"
       - task: ArchiveFiles@2
         inputs:
-          rootFolderOrFile: $(Build.SourcesDirectory)/clustersearch
-          archiveFile: $(Build.SourcesDirectory)/clustersearch-linux-ppc64le-POWER9.tar.gz
+          rootFolderOrFile: $(Build.SourcesDirectory)/spacedust
+          archiveFile: $(Build.SourcesDirectory)/spacedust-linux-ppc64le-POWER9.tar.gz
           includeRootFolder: true
           archiveType: tar
       - task: DownloadSecureFile@1
         inputs:
-          secureFile: azure_upload_clustersearch
+          secureFile: azure_upload_spacedust
         displayName: Get Deployment Key
       - script: |
           mkdir ~/.ssh && mv $DOWNLOADSECUREFILE_SECUREFILEPATH ~/.ssh/id_rsa
@@ -261,5 +261,5 @@ jobs:
           ssh-keyscan -t rsa uniclust.mmseqs.com >> ~/.ssh/known_hosts
           cd "${BUILD_SOURCESDIRECTORY}"
           ssh codeship@uniclust.mmseqs.com "mkdir -p \"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}\""
-          scp clustersearch-osx-universal.tar.gz clustersearch-linux-sse2.tar.gz clustersearch-linux-sse41.tar.gz clustersearch-linux-avx2.tar.gz clustersearch-linux-arm64.tar.gz clustersearch-linux-ppc64le-POWER8.tar.gz clustersearch-linux-ppc64le-POWER9.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
-          ssh codeship@uniclust.mmseqs.com "update-latest-clustersearch.sh \"${BUILD_SOURCEVERSION}\""
+          scp spacedust-osx-universal.tar.gz spacedust-linux-sse2.tar.gz spacedust-linux-sse41.tar.gz spacedust-linux-avx2.tar.gz spacedust-linux-arm64.tar.gz spacedust-linux-ppc64le-POWER8.tar.gz spacedust-linux-ppc64le-POWER9.tar.gz codeship@uniclust.mmseqs.com:"/home/mirdita/repositories/mmseqs-webserver/archive/${BUILD_SOURCEVERSION}"
+          ssh codeship@uniclust.mmseqs.com "update-latest-spacedust.sh \"${BUILD_SOURCEVERSION}\""
