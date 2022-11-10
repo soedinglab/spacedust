@@ -68,7 +68,6 @@ if notExists "${OUT}_ss.dbtype"; then
         || fail "createsubdb failed"
 fi
 
-
 "$MMSEQS" lndb "${IN}_h" "${OUT}_h" ${VERBOSITY}
 
 cut -f2 "${TMP_PATH}/mapping" > "${TMP_PATH}/mapping_id"
@@ -96,3 +95,8 @@ fi
 "$MMSEQS" lndb "${IN}.lookup" "${OUT}.lookup" ${VERBOSITY}
 
 "$MMSEQS" lndb "${IN}.source" "${OUT}.source" ${VERBOSITY}
+
+TOTAL_NUM_SEQS=$(wc -l < "${IN}.index")
+NUM_SEQS_MAPPED="$(wc -l < "${OUT}.index")"
+PERCENTAGE=$(echo "scale=2; $NUM_SEQS_MAPPED / $TOTAL_NUM_SEQS * 100" | bc)
+echo "${NUM_SEQS_MAPPED} out of ${TOTAL_NUM_SEQS} sequences (${PERCENTAGE}%) were mapped to target DB (${TARGET})."
