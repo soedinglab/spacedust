@@ -158,7 +158,7 @@ jobs:
     pool:
       vmImage: 'Ubuntu-latest'
     dependsOn:
-      - build_macos_1015
+      - build_macos_11
       - build_ubuntu_1804
       - build_ubuntu_cross_2004
     steps:
