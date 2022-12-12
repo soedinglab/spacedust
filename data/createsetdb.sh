@@ -22,6 +22,17 @@ abspath() {
     fi
 }
 
+ARR=""
+push_back() {
+    # shellcheck disable=SC1003
+    CURR="$(printf '%s' "$1" | awk '{ gsub(/'\''/, "'\''\\'\'''\''"); print; }')"
+    if [ -z "$ARR" ]; then
+        ARR=''\'$CURR\'''
+    else
+        ARR=$ARR' '\'$CURR\'''
+    fi
+}
+
 hasCommand () {
     command -v "$1" >/dev/null 2>&1 || { echo "Please make sure that $1 is in \$PATH."; exit 1; }
 }
@@ -56,8 +67,13 @@ if [ "$("${MMSEQS}" dbtype "${TMP_PATH}/seqDB")" = "Nucleotide" ]; then
     fi
 
     if notExists "${OUTDB}_nucl.index"; then
+        #read line by line and push back to array
+        while IFS= read -r line; do
+            push_back "$line"
+        done < "${GFFDIR}"
+        eval "set -- $ARR"
         # shellcheck disable=SC2086
-        "${MMSEQS}" gff2db $(cat "${GFFDIR}") "${TMP_PATH}/seqDB" "${OUTDB}_nucl" ${GFF2DB_PAR} \
+        "${MMSEQS}" gff2db "${@}" "${TMP_PATH}/seqDB" "${OUTDB}_nucl" ${GFF2DB_PAR} \
             || fail "gff2db failed"
     fi
 
