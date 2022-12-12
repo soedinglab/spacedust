@@ -398,7 +398,7 @@ unsigned int cluster_idx = 0;
             }
             while(isFirstIter|| (maxScore >= sMin)){
                 size_t i1 = 0;
-                size_t i2;
+                size_t i2 = 0;
                 //find closest pair of clusters (i1,i2), i.e pair of clusters with highest score
                 for(size_t s = 0; s < K-1; s++){
                     i1 = 0;
