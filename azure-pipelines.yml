@@ -7,10 +7,10 @@ variables:
     regression: 1
 
 jobs:
-  - job: build_ubuntu_1804
-    displayName: Ubuntu 1804
+  - job: build_ubuntu_2004
+    displayName: Ubuntu 2004
     pool:
-      vmImage: 'Ubuntu-18.04'
+      vmImage: 'Ubuntu-20.04'
     timeoutInMinutes: 120
     strategy:
       matrix:
@@ -135,9 +135,7 @@ jobs:
       vmImage: 'macos-11'
     steps:
       - checkout: self
-      - script: |
-          sudo xcode-select -s "/Applications/Xcode_12.2.app"
-        displayName: Use Xcode 12.2
+        submodules: true
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build spacedust
@@ -156,10 +154,10 @@ jobs:
     displayName: Upload Artifacts
     condition: and(succeeded(), ne(variables['Build.Reason'], 'PullRequest'))
     pool:
-      vmImage: 'Ubuntu-latest'
+      vmImage: 'Ubuntu-20.04'
     dependsOn:
       - build_macos_11
-      - build_ubuntu_1804
+      - build_ubuntu_2004
       - build_ubuntu_cross_2004
     steps:
       - script: |
