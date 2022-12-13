@@ -14,7 +14,7 @@ mkdir -p "${BASEDIR}"
 "${SPACEDUST}" clustersearch "${BASEDIR}/genome" "${BASEDIR}/genome" "${BASEDIR}/result" "${BASEDIR}/tmp" --filter-self-match
 
 
-awk 'END{print NR}' "${BASEDIR}/result" | grep -q 139 \
+awk 'END{ if (NR != 139) exit 1; }' "${BASEDIR}/result" \
   || fail "Check 1 failed"
 tr -d '\000' < "${BASEDIR}/result_h" |awk '$3 < 1E-20 { cnt++; } END { if (cnt != 2) exit 1; }' \
   || fail "Check 2 failed"
