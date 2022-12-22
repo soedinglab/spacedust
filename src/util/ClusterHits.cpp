@@ -10,6 +10,58 @@
 #include <omp.h>
 #endif
 
+// --------------------------------------------------------------------------------
+// -- Special math functions module.
+// --
+// -- Copyright (C) 2011-2016 Stefano Peluchetti. All rights reserved.
+// -------------------------------------------------------------------------------- 
+//    -- Lanczos approximation, see:
+//   -- Pugh[2004]: AN ANALYSIS OF THE LANCZOS GAMMA APPROXIMATION
+//   -- http://bh0.physics.ubc.ca/People/matt/Doc/ThesesOthers/Phd/pugh.pdf
+//   -- pag 116 for optimal formula and coefficients. Theoretical accuracy of 
+//   -- 16 digits is likely in practice to be around 14. 
+
+const double gamma_r10 = 10.900511;
+
+const double gamma_dk[11] = {
+    2.48574089138753565546e-5,
+    1.05142378581721974210,
+    -3.45687097222016235469,
+    4.51227709466894823700,
+    -2.98285225323576655721,
+    1.05639711577126713077,
+    -1.95428773191645869583e-1,
+    1.70970543404441224307e-2,
+    -5.71926117404305781283e-4,
+    4.63399473359905636708e-6,
+    -2.71994908488607703910e-9
+};
+
+const double gamma_c = 2*sqrt(exp(1.0)/M_PI);
+
+double logGamma(double x){
+    if(x < 0.5){
+        return log(M_PI) - log(abs(sin(M_PI*x))) - logGamma(1-x);
+    }
+    else if (x == 1){
+        return 0.0;
+    }
+    else{
+    double sum = gamma_dk[0];
+    sum += gamma_dk[1]/(x + 0);
+    sum += gamma_dk[2]/(x + 1);
+    sum += gamma_dk[3]/(x + 2);
+    sum += gamma_dk[4]/(x + 3);
+    sum += gamma_dk[5]/(x + 4);
+    sum += gamma_dk[6]/(x + 5);
+    sum += gamma_dk[7]/(x + 6);
+    sum += gamma_dk[8]/(x + 7);
+    sum += gamma_dk[9]/(x + 8);
+    sum += gamma_dk[10]/(x + 9);
+    return log(gamma_c) + (x - 0.5)*log(x  + gamma_r10 - 0.5) - (x - 0.5) + log(sum);
+    }
+}
+
 struct hit{
     std::string alignment;
     double pval;
@@ -50,7 +102,7 @@ double hypergeoDistribution(double* lookup, int k, int n, int N, int K){
         for (int i = 0; i < k + 1; i++){
             sum += hypergeoDensity(lookup, i, n, N, K);
         }
-        return sum;
+        return sum < 1.0 ? sum : 1.0;
     }
 }
 
@@ -278,7 +330,7 @@ int clusterhits(int argc, const char **argv, const Command &command) {
     //create a lookup table for all possible log gamma values (n-1)!, n! will be lookup[n + 1]
     double* lGammaLookup = new double[maxOrfCount + 2];
     for (size_t i = 0; i < maxOrfCount + 2; ++i) { 
-        lGammaLookup[i] = lgamma(i);
+        lGammaLookup[i] = logGamma(i*1.0);
     }
 
 
