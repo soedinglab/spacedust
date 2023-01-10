@@ -42,7 +42,7 @@ To enable structure comparisons, spacedust requires the installation of [Foldsee
 ### Important parameters
 
     # createsetdb
-    --gff-type                             Type in the GFF file to filter by
+    --gff-type                             Type of feature in the GFF file to filter by (default: "", all features)
     --gff-dir                              Path to gff dir file
 
     # clustersearch
@@ -69,7 +69,7 @@ To start, you need to create a database of the input genomes `setDB`. Before sea
 To enable protein structure search with Foldseek, the protein sequences are mapped to Foldseek structure sequence DB like AlphaFoldDB. This requires pre-downloading the reference FoldseekDB.
 
     # Download reference FoldseekDB
-    path/to/foldseek databases Alphafold/UniProt-NO-CA refFoldseekDB tmpFolder
+    path/to/foldseek databases Alphafold/UniProt refFoldseekDB tmpFolder
 
     # Convert to structure sequence DB
     spacedust aa2foldseek setDB refFoldseekDB outDB tmpFolder
