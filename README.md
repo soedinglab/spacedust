@@ -13,7 +13,7 @@ Compiling spacedust from source has the advantage of system-specific optimizatio
     cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
     make -j
     make install
-    export PATH=$(pwd)/spacedust/bin/:$PATH
+    export PATH=$(pwd)/bin/:$PATH
 
 :exclamation: If you want to compile spacedust on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP and spacedust will not be able to run multithreaded. Adjust the `cmake` call above to:
 
