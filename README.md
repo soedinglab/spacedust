@@ -4,31 +4,27 @@ Spacedust is a modular toolkit for identification of conserved gene clusters amo
 
 ## Installation
 
-Compiling spacedust from source has the advantage of system-specific optimizations, which should improve its performance. To compile spacedust `git`, `g++` (4.9 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the spacedust binary will be located in the `build/bin` directory.
+Spacedust can be used by downloading a [statically compiled version](https://mmseqs.com/spacedust/) or [compiling from source](#compile-from-source). It requires a 64-bit system (check with `uname -a | grep x86_64`) with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux or `sysctl -a | grep machdep.cpu.features | grep SSE4.1` on MacOS).
 
-    git clone https://github.com/soedinglab/spacedust.git
-    cd spacedust
-    mkdir build
-    cd build
-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
-    make -j
-    make install
-    export PATH=$(pwd)/bin/:$PATH
+    # static Linux AVX2 build (check using: cat /proc/cpuinfo | grep avx2)
+    wget https://mmseqs.com/spacedust/spacedust-linux-avx2.tar.gz; tar xvzf spacedust-linux-avx2.tar.gz; export PATH=$(pwd)/spacedust/bin/:$PATH
+    # static Linux SSE4.1 build (check using: cat /proc/cpuinfo | grep sse4_1)
+    wget https://mmseqs.com/spacedust/spacedust-linux-sse41.tar.gz; tar xvzf spacedust-linux-sse41.tar.gz; export PATH=$(pwd)/spacedust/bin/:$PATH
+    # static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
+    wget https://mmseqs.com/spacedust/spacedust-osx-universal.tar.gz; tar xvzf spacedust-osx-universal.tar.gz; export PATH=$(pwd)/spacedust/bin/:$PATH
 
-:exclamation: If you want to compile spacedust on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP and spacedust will not be able to run multithreaded. Adjust the `cmake` call above to:
-
-    CC="$(brew --prefix)/bin/gcc-10" CXX="$(brew --prefix)/bin/g++-10" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
+Other precompiled binaries for ARM64, PPC64LE amd SSE2 are available at [https://mmseqs.com/spacedust](https://mmseqs.com/spacedust).
 
 ## Input
 
-The starting point is either (1) FASTA (`.fna` or `.fna.gz`) files of nulceotide genome or contig sequences coupled with protein-coding sequences (**CDS**) annotated in GFF3 (`.gff3`) format (typically by running a gene prediction program like [Prodigal](https://github.com/hyattpd/Prodigal)). **Note**: this only works with (prokaryotic) genomes without intron/exon structures or (2) FASTA (`.faa` or `.faa.gz`) files of protein sequences with header format from [Prodigal](https://github.com/hyattpd/Prodigal)
+The starting point is either (1) FASTA (`.fna` or `.fna.gz`) files of nulceotide genome or contig sequences coupled with protein-coding sequences (**CDS**) annotated in GFF3 (`.gff3`) format (typically by running a gene prediction program like [Prodigal](https://github.com/hyattpd/Prodigal)). **Note**: this only works with (prokaryotic) genomes without intron/exon structures or (2) FASTA (`.faa` or `.faa.gz`) files of protein sequences with header format from [Prodigal](https://github.com/hyattpd/Prodigal).
  <!-- for prokaryotes or [metaeuk](https://github.com/soedinglab/metaeuk) for eukaryotes.  -->
 Input genomes are supplied as separate FASTA and GFF3 files (one genome per file). 
 
 ## Dependencies
 
 To enable structure comparisons, spacedust requires the installation of [Foldseek](https://github.com/steineggerlab/foldseek) in the working directory.
- <!-- (the binary file `/foldseek/build/bin/foldseek` should exist in the working directory). -->
+ <!-- (the binary file `/spacedust/build/bin/foldseek` should exist in the working directory). -->
 
 ## Running Spacedust
 
@@ -103,3 +99,20 @@ Each line in the header file describes an individual cluster of hits. The column
 ### Removing temporary files
 
 During the workflow execution, spacedust will keep all intermediate outputs in `tmpFolder`, passing the `--remove-tmp-files` parameter will clear out the `tmpFolder` after workflows have finished.
+
+## Compile from source
+
+Compiling spacedust from source has the advantage of system-specific optimizations, which should improve its performance. To compile spacedust `git`, `g++` (4.9 or higher) and `cmake` (3.0 or higher) are required. Afterwards, the spacedust binary will be located in the `build/bin` directory.
+
+    git clone https://github.com/soedinglab/spacedust.git
+    cd spacedust
+    mkdir build
+    cd build
+    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
+    make -j
+    make install
+    export PATH=$(pwd)/bin/:$PATH
+
+:exclamation: If you want to compile spacedust on macOS, please install and use `gcc` from Homebrew. The default macOS `clang` compiler does not support OpenMP and spacedust will not be able to run multithreaded. Adjust the `cmake` call above to:
+
+    CC="$(brew --prefix)/bin/gcc-10" CXX="$(brew --prefix)/bin/g++-10" cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=. ..
