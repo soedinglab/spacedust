@@ -85,7 +85,21 @@ int clustersearch(int argc, const char **argv, const Command &command) {
     cmd.addVariable("USE_PROFILE", par.profileClusterSearch == 1 ? "TRUE" : NULL);
     cmd.addVariable("USE_FOLDSEEK", par.clusterSearchMode == 1 ? "TRUE" : NULL);
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clusterworkflow).c_str());
-    cmd.addVariable("SEARCH_PAR", par.createParameterString(par.searchworkflow).c_str());
+    if(par.numIterations <= 1){
+        std::vector<MMseqsParameter*> searchwithoutnumiter;
+        for (size_t i = 0; i < par.searchworkflow.size(); i++) {
+            if (par.searchworkflow[i]->uniqid != par.PARAM_NUM_ITERATIONS.uniqid) {
+                searchwithoutnumiter.push_back(par.searchworkflow[i]);
+            }
+        }
+        cmd.addVariable("SEARCH_PAR", par.createParameterString(searchwithoutnumiter).c_str());
+    }else if(par.profileClusterSearch == 1) {
+        Debug(Debug::ERROR) << "Profile-profile cluster searches are currently not supported. Please either set --profile-cluster-search 0 or --num-iterations 1\n";
+        EXIT(EXIT_FAILURE);
+    }
+    else{
+        cmd.addVariable("SEARCH_PAR", par.createParameterString(par.searchworkflow).c_str());
+    }
     cmd.addVariable("FOLDSEEKSEARCH_PAR", par.createParameterString(par.foldseeksearch).c_str());
     cmd.addVariable("BESTHITBYSET_PAR", par.createParameterString(par.besthitbyset).c_str());
     cmd.addVariable("COMBINEHITS_PAR", par.createParameterString(par.combinehits).c_str());
