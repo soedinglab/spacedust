@@ -9,7 +9,7 @@
 void setClusterSearchWorkflowDefaults(LocalParameters *p) {
     p->sensitivity = 5.7;
     // TODO: Check query cov maybe?
-    p->covMode = Parameters::COV_MODE_BIDIRECTIONAL;
+    p->covMode = Parameters::COV_MODE_QUERY;
     p->covThr = 0.8;
     p->evalThr = 10;
     
