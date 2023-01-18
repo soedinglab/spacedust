@@ -112,7 +112,8 @@ if notExists "${TMP_PATH}/clusters.index"; then
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
-    rmdir "${TMP_PATH}/search"
+    echo "Remove temporary files"
+    rm -rf "${TMP_PATH}/search"
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
     # shellcheck disable=SC2086
