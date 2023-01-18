@@ -27,7 +27,7 @@ int aa2foldseek(int argc, const char **argv, const Command &command) {
             Debug(Debug::INFO) << "Created dir " << par.db4 << "\n";
         }
     }
-    size_t hash = par.hashParameter(command.databases, par.filenames, par.clustersearchworkflow);
+    size_t hash = par.hashParameter(command.databases, par.filenames, par.aa2foldseek);
     std::string tmpDir = par.db4 + "/" + SSTR(hash);
     if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
         if (FileUtil::makeDir(tmpDir.c_str()) == false) {
@@ -40,6 +40,9 @@ int aa2foldseek(int argc, const char **argv, const Command &command) {
     FileUtil::symlinkAlias(tmpDir, "latest");
 
     CommandCaller cmd;
+    if (par.removeTmpFiles) {
+        cmd.addVariable("REMOVE_TMP", "TRUE");
+    }
     cmd.addVariable("SEARCH_PAR", par.createParameterString(par.searchworkflow).c_str());
     par.stat = "linecount";
     cmd.addVariable("RESULT2STATS_PAR", par.createParameterString(par.result2stats).c_str());

@@ -110,12 +110,25 @@ if notExists "${OUT}_set_size.index"; then
         || fail "result2stats failed"
 fi
 
-#use the original lookup file to ensure fixed indeces
-"$MMSEQS" lndb "${IN}.lookup" "${OUT}.lookup" ${VERBOSITY}
-
-"$MMSEQS" lndb "${IN}.source" "${OUT}.source" ${VERBOSITY}
-
-TOTAL_NUM_SEQS=$(wc -l < "${IN}.index")
-NUM_SEQS_MAPPED="$(wc -l < "${OUT}.index")"
-PERCENTAGE=$(echo "scale=2; $NUM_SEQS_MAPPED / $TOTAL_NUM_SEQS * 100" | bc)
-echo "${NUM_SEQS_MAPPED} out of ${TOTAL_NUM_SEQS} sequences (${PERCENTAGE}%) were mapped to target DB (${TARGET})."
+if [ -n "${REMOVE_TMP}" ]; then
+    echo "Remove temporary files"
+    rm -rf "${TMP_PATH}/search"
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/alnDB" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/topHitalnDB" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/topHitalnSwapDB" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/topHitalnSwapDB_pref" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/outDB" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/outDB_h" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/outDB_ss" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/outDB_ca" ${VERBOSITY}
+    rm -f "${TMP_PATH}/mapping"
+    rm -f "${TMP_PATH}/aa2foldseek.sh"
+fi
