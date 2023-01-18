@@ -363,6 +363,10 @@ unsigned int cluster_idx = 0;
             //from result header file read Nq & Nt
             header = headerReader.getData(i, thread_idx);
             std::vector<std::string>  hdrcolumns = Util::split(header, "\t");
+            if (hdrcolumns.size() < 6 ) {
+                Debug(Debug::ERROR) << "Invalid header record\n";
+                EXIT(EXIT_FAILURE);
+            }
             unsigned int qSet = Util::fast_atoi<size_t>(hdrcolumns[0].c_str());
             unsigned int tSet = Util::fast_atoi<size_t>(hdrcolumns[1].c_str());
             unsigned int Nq = Util::fast_atoi<size_t>(hdrcolumns[2].c_str()); //query set size
@@ -386,6 +390,14 @@ unsigned int cluster_idx = 0;
                 //from seqid get entryName in lookup, split by "_" and retrieve info
                 std::vector<std::string> qcolumns = Util::split(qlookup[qid].entryName, "_");
                 std::vector<std::string> tcolumns = Util::split(tlookup[tid].entryName, "_");
+                if (qcolumns.size() < 4 ) {
+                    Debug(Debug::ERROR) << "Invalid query lookup record\n";
+                    EXIT(EXIT_FAILURE);
+                }
+                if (tcolumns.size() < 4 ) {
+                    Debug(Debug::ERROR) << "Invalid target lookup record\n";
+                    EXIT(EXIT_FAILURE);
+                }
                 int qStart = Util::fast_atoi<size_t>(qcolumns[qcolumns.size()-2].c_str());
                 int qEnd = Util::fast_atoi<size_t>(qcolumns.back().c_str());
                 int tStart = Util::fast_atoi<size_t>(tcolumns[tcolumns.size()-2].c_str());
