@@ -16,6 +16,7 @@ TMP_PATH="$4"
 [ ! -f "${TARGET}.dbtype" ] && echo "${TARGET}.dbtype not found!" && exit 1;
 [ ! -f "${TARGET}_h.dbtype" ] && echo "${TARGET}_h.dbtype not found!" && exit 1;
 [ ! -f "${TARGET}_ss.dbtype" ] && echo "${TARGET}_ss.dbtype not found!" && exit 1;
+[ ! -f "${TARGET}_ca.dbtype" ] && echo "${TARGET}_ca.dbtype not found!" && exit 1;
 
 
 if notExists "${TMP_PATH}/alnDB.dbtype"; then
@@ -67,6 +68,24 @@ if notExists "${OUT}_ss.dbtype"; then
     "$MMSEQS" renamedbkeys "${TMP_PATH}/mapping" "${TMP_PATH}/outDB_ss" "${OUT}_ss" ${VERBOSITY}\
         || fail "createsubdb failed"
 fi
+
+#fake a dbtype that MMseqs accepts
+mv -f "${TARGET}_ca.dbtype" "${TARGET}_ca.dbtype.tmp"
+cp -f "${TARGET}_ss.dbtype" "${TARGET}_ca.dbtype"
+
+if notExists "${TMP_PATH}/outDB_ca.dbtype"; then
+    # shellcheck disable=SC2086 
+    "$MMSEQS" createsubdb "${TMP_PATH}/topHitalnSwapDB" "${TARGET}_ca" "${TMP_PATH}/outDB_ca" ${VERBOSITY}\
+        || fail "createsubdb failed"
+fi
+
+if notExists "${OUT}_ca.dbtype"; then
+    # shellcheck disable=SC2086
+    "$MMSEQS" renamedbkeys "${TMP_PATH}/mapping" "${TMP_PATH}/outDB_ca" "${OUT}_ca" ${VERBOSITY}\
+        || fail "createsubdb failed"
+fi
+mv -f "${TARGET}_ca.dbtype.tmp" "${TARGET}_ca.dbtype"
+cp -f "${TARGET}_ca.dbtype" "${OUT}_ca.dbtype"
 
 "$MMSEQS" lndb "${IN}_h" "${OUT}_h" ${VERBOSITY}
 
