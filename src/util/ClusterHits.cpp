@@ -191,7 +191,7 @@ double clusterMatchScore(double* lookup, std::vector<hit> &cluster, int K, int N
             //full score would be: -log(pClu) - log(pOrd) + log(1 -log(pClu) - log(pOrd))
             return - w * logpClu - (1 - w) * logpOrd;
         } else {
-            return - logpClu - logpOrd;
+            return - 0.5 * logpClu - 0.5 * logpOrd;
         }
     }
 }
@@ -458,7 +458,7 @@ unsigned int cluster_idx = 0;
                 double w = computeWeight(lGammaLookup, 2, K, Nq, Nt);
                 sMin  = -w * log(clusterPval_fast(d+1, K, Nq, Nt)) - (1-w)* logOrderingPval(lGammaLookup,2,1);
             } else{
-                sMin  = -log(clusterPval_fast(d+1, K, Nq, Nt)) - logOrderingPval(lGammaLookup,2,1);
+                sMin  = - 0.5 * log(clusterPval_fast(d+1, K, Nq, Nt)) - 0.5 * logOrderingPval(lGammaLookup,2,1);
             }
             while(isFirstIter|| (maxScore >= sMin)){
                 size_t i1 = 0;
