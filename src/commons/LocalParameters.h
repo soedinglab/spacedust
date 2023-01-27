@@ -25,8 +25,10 @@ public:
     std::vector<MMseqsParameter*> combinehits;
     std::vector<MMseqsParameter*> clusterhits;
     std::vector<MMseqsParameter*> foldseeksearch;
+    std::vector<MMseqsParameter*> counthits;
 
     PARAMETER(PARAM_CLUSTERSEARCH_MODE)
+    PARAMETER(PARAM_SUBOPTIMAL_HITS)
     PARAMETER(PARAM_FILTER_SELF_MATCH)
     PARAMETER(PARAM_MULTIHIT_PVAL)
     PARAMETER(PARAM_CLUSTER_PVAL)
@@ -46,11 +48,13 @@ public:
     int clusterSize;
     std::string gffDir;
     bool filterSelfMatch;
+    int suboptHitsFactor;
     
 private:
     LocalParameters() : 
         Parameters(),
         PARAM_CLUSTERSEARCH_MODE(PARAM_CLUSTERSEARCH_MODE_ID, "--search-mode", "Cluster Search Mode", "0: sequence search with MMseqs2, 1: structure comparison with Foldseek", typeid(int), (void *) &clusterSearchMode, "^[0-1]{1}"),
+        PARAM_SUBOPTIMAL_HITS(PARAM_SUBOPTIMAL_HITS_ID, "--suboptimal-hits", "Include sub-optimal hits with factor", "Include sub-optimal hits of query sequence up to a factor of its E-value. 0: only include one best hit", typeid(int), (void *) &suboptHitsFactor, "^(0|[1-9]{1}[0-9]*)$"),
         PARAM_FILTER_SELF_MATCH(PARAM_FILTER_SELF_MATCH_ID, "--filter-self-match", "Filter self match", "Remove hits between the same set. 0: do not filter, 1: filter", typeid(bool), (void *) &filterSelfMatch, ""),
         PARAM_MULTIHIT_PVAL(PARAM_MULTIHIT_PVAL_ID, "--multihit-pval", "Multihit P-value cutoff", "Multihit P-value threshold for cluster match output", typeid(float), (void *) &pMHThr, "^0(\\.[0-9]+)?|^1(\\.0+)?$"),
         PARAM_CLUSTER_PVAL(PARAM_CLUSTER_PVAL_ID, "--cluster-pval", "Clustering and Ordering P-value cutoff","Clustering and Ordering P-value threshold for cluster match output", typeid(float), (void *) &pCluThr, "^0(\\.[0-9]+)?|^1(\\.0+)?$"),
@@ -76,6 +80,7 @@ private:
 
         // besthitperset
         besthitbyset.push_back(&PARAM_SIMPLE_BEST_HIT);
+        besthitbyset.push_back(&PARAM_SUBOPTIMAL_HITS);
         besthitbyset.push_back(&PARAM_THREADS);
         besthitbyset.push_back(&PARAM_COMPRESSED);
         besthitbyset.push_back(&PARAM_V);
@@ -88,6 +93,12 @@ private:
         combinehits.push_back(&PARAM_THREADS);
         combinehits.push_back(&PARAM_COMPRESSED);
         combinehits.push_back(&PARAM_V);
+
+        // counthits
+        counthits.push_back(&PARAM_DB_OUTPUT);
+        counthits.push_back(&PARAM_THREADS);
+        counthits.push_back(&PARAM_COMPRESSED);
+        counthits.push_back(&PARAM_V);
 
         // foldseeksearch
         foldseeksearch.push_back(&PARAM_E);
@@ -103,7 +114,7 @@ private:
         createsetdb = combineList(createdb, extractorfs);
         createsetdb = combineList(createsetdb, translatenucs);
         createsetdb = combineList(createsetdb, gff2db);
-        createsetdb = combineList(createsetdb, aa2foldseek);
+        createsetdb = combineList(createsetdb, result2stats);
         createsetdb.push_back(&PARAM_GFF_DIR);
 
         // multi hit search
@@ -123,6 +134,7 @@ private:
 
 
         clusterSearchMode = 0;
+        suboptHitsFactor = 100;
         filterSelfMatch = 0;
         maxGeneGaps = 3;
         clusterSize = 2;

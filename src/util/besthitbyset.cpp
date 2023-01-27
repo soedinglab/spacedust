@@ -22,8 +22,8 @@ double ComputelogPval(double eval, double logCalibration){
 class BestHitBySetFilter : public Aggregation {
 public :
     BestHitBySetFilter(const std::string &targetDbName, const std::string &resultDbName,
-                       const std::string &outputDbName, bool simpleBestHitMode, unsigned int threads, unsigned int compressed) :
-            Aggregation(targetDbName, resultDbName, outputDbName, threads, compressed), simpleBestHitMode(simpleBestHitMode) {
+                       const std::string &outputDbName, bool simpleBestHitMode, int suboptHitsFactor, unsigned int threads, unsigned int compressed) :
+            Aggregation(targetDbName, resultDbName, outputDbName, threads, compressed), simpleBestHitMode(simpleBestHitMode), suboptHitsFactor(suboptHitsFactor) {
         std::string sizeDbName = targetDbName + "_set_size";
         std::string sizeDbIndex = targetDbName + "_set_size.index";
         targetSizeReader = new DBReader<unsigned int>(sizeDbName.c_str(), sizeDbIndex.c_str(), threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
@@ -85,9 +85,9 @@ public :
                 }
             }
         }
-        //TODO: includeParalog with a factor e.g. 100. Go through the list again if this option is turned on for those with more than 1 hits
-        if(false && simpleBestHitMode && dataToAggregate.size() > 1){
-            double evalThr = bestEval * 100; //TODO: hardcoded
+        //include (suboptimal) hits with a factor e.g. 100. Go through the list again if this option is turned on for those with more than 1 hits
+        if((suboptHitsFactor > 0) && simpleBestHitMode && dataToAggregate.size() > 1){
+            double evalThr = bestEval * suboptHitsFactor; 
             for (size_t i = 0; i < dataToAggregate.size(); i++) {
                 double eval = strtod(dataToAggregate[i][4].c_str(), NULL);
                 if( eval <= evalThr){
@@ -146,6 +146,7 @@ public :
 private:
     DBReader<unsigned int> *targetSizeReader;
     bool simpleBestHitMode;
+    int suboptHitsFactor;
 };
 
 
@@ -153,6 +154,6 @@ int besthitbyset(int argc, const char **argv, const Command &command) {
     LocalParameters& par = LocalParameters::getLocalInstance();
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    BestHitBySetFilter aggregation(par.db2, par.db3, par.db4, par.simpleBestHit, (unsigned int) par.threads, par.compressed);
+    BestHitBySetFilter aggregation(par.db2, par.db3, par.db4, par.simpleBestHit, par.suboptHitsFactor, (unsigned int) par.threads, par.compressed);
     return aggregation.run();
 }

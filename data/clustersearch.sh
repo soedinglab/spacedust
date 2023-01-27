@@ -69,7 +69,7 @@ if [ -n "${USE_PROFILE}" ]; then
 else
     if notExists "${TMP_PATH}/result.index"; then
         if [ -n "${USE_FOLDSEEK}" ]; then
-            # shellcheck disable=SC2086
+                # shellcheck disable=SC2086
             "${FOLDSEEK}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
                 || fail "foldseek search failed"
         else
@@ -89,7 +89,7 @@ fi
 if notExists "${TMP_PATH}/aggregate.index"; then
     # aggregation: take for each target set the best hit
     # shellcheck disable=SC2086
-    "${MMSEQS}" besthitperset "${QUERY}" "${TARGET}" "${TMP_PATH}/result_prefixed" "${TMP_PATH}/aggregate" ${BESTHITBYSET_PAR} \
+    "${MMSEQS}" besthitbyset "${QUERY}" "${TARGET}" "${TMP_PATH}/result_prefixed" "${TMP_PATH}/aggregate" ${BESTHITBYSET_PAR} \
         || fail "aggregate best hit failed"
 fi
 
