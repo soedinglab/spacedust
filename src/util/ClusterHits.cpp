@@ -464,13 +464,10 @@ unsigned int cluster_idx = 0;
                 size_t i1 = 0;
                 size_t i2 = 0;
                 //find closest pair of clusters (i1,i2), i.e pair of clusters with highest score
-                for(size_t s = 0; s < K-1; s++){
-                    i1 = 0;
-                    for (size_t i = 0; i < K; i++){
-                        i1 = (DistMat[i][dmin[i]] > DistMat[i1][dmin[i1]]) ? i : i1;
-                    }
-                    i2 = dmin[i1];
+                for (size_t i = 0; i < K; i++){
+                    i1 = (DistMat[i][dmin[i]] > DistMat[i1][dmin[i1]]) ? i : i1;
                 }
+                i2 = dmin[i1];
 
                 maxScore = DistMat[i1][i2];
 
