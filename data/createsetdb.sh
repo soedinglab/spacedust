@@ -101,7 +101,7 @@ elif [ "$("${MMSEQS}" dbtype "${TMP_PATH}/seqDB")" = "Aminoacid" ]; then
         |sort -k1,1n > "${TMP_PATH}/seqDB_h_pref.tmp"
 
         join -t "$(printf '\t')" -o '1.1 2.2 2.3 2.4 1.3' "${TMP_PATH}/seqDB.lookup" "${TMP_PATH}/seqDB_h_pref.tmp" \
-        |awk -F '[\t]' '{ if (setid == $NF) { counter++ } else { counter = 1; setid = $NF }; print $1"\t"$2"_"counter"_"$3"_"$4"\t"$NF }' \
+        |awk -F '[\t]' '{ if (setid == $NF) { counter++ } else { counter = 1; setid = $NF }; print $1"\t"$2"_"counter-1"_"$3"_"$4"\t"$NF }' \
         > "${TMP_PATH}/seqDB.lookup.tmp"
     fi
     
