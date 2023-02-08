@@ -1,7 +1,7 @@
 #!/bin/sh -e
 # shellcheck disable=SC2086
 [ -z "$MMSEQS" ] && echo "Please set the environment variable \$MMSEQS to your MMSEQS binary." && exit 1;
-[ "$#" -ne 4 ] && echo "Please provide <inputDB> <targetFoldSeekDB> <outDB> <tmpDir>" && exit 1
+[ "$#" -ne 3 ] && echo "Please provide <inputDB> <targetFoldSeekDB> <tmpDir>" && exit 1
 
 notExists() {
 	[ ! -f "$1" ]
@@ -9,8 +9,8 @@ notExists() {
 
 IN="$1"
 TARGET="$2"
-OUT="$3"
-TMP_PATH="$4"
+OUT="$1_foldseek"
+TMP_PATH="$3"
 
 [ ! -f "${IN}.dbtype" ] && echo "${IN}.dbtype not found!" && exit 1;
 [ ! -f "${TARGET}.dbtype" ] && echo "${TARGET}.dbtype not found!" && exit 1;
@@ -89,25 +89,23 @@ cp -f "${TARGET}_ca.dbtype" "${OUT}_ca.dbtype"
 
 "$MMSEQS" lndb "${IN}_h" "${OUT}_h" ${VERBOSITY}
 
-cut -f2 "${TMP_PATH}/mapping" > "${TMP_PATH}/mapping_id"
-awk 'NR==FNR{a[$1];next} ($1 in a)' "${TMP_PATH}/mapping_id" "${IN}.lookup" > "${TMP_PATH}/lookup"
+#use the original lookup file to ensure fixed indeces
+"$MMSEQS" lndb "${IN}.lookup" "${OUT}.lookup" ${VERBOSITY}
 
-if notExists "${OUT}_member_to_set.index"; then
-    awk '{ print $1"\t"$3; }' "${TMP_PATH}/lookup" | sort -k1,1n -k2,2n > "${OUT}_member_to_set.tsv"
-    "${MMSEQS}" tsv2db "${OUT}_member_to_set.tsv" "${OUT}_member_to_set" --output-dbtype 5 \
-        || fail "tsv2db failed"
-fi
+"$MMSEQS" lndb "${IN}.source" "${OUT}.source" ${VERBOSITY}
 
-if notExists "${OUT}_set_to_member.index"; then
-    awk '{ print $3"\t"$1; }' "${TMP_PATH}/lookup" | sort -k1,1n -k2,2n > "${OUT}_set_to_member.tsv"
-    "${MMSEQS}" tsv2db "${OUT}_set_to_member.tsv" "${OUT}_set_to_member" --output-dbtype 5 \
-        || fail "tsv2db failed"
-fi
+TOTAL_NUM_SEQS=$(wc -l < "${IN}.index")
+NUM_SEQS_MAPPED="$(wc -l < "${OUT}.index")"
+PERCENTAGE=$(echo "scale=2; $NUM_SEQS_MAPPED / $TOTAL_NUM_SEQS * 100" | bc)
+echo "${NUM_SEQS_MAPPED} out of ${TOTAL_NUM_SEQS} sequences (${PERCENTAGE}%) were mapped to target DB (${TARGET}) and stored in ${OUT}"
 
-if notExists "${OUT}_set_size.index"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" result2stats "${OUT}" "${OUT}" "${OUT}_set_to_member" "${OUT}_set_size" ${RESULT2STATS_PAR} \
-        || fail "result2stats failed"
+if notExists "${OUT}_unmapped.index"; then
+    awk 'BEGIN{FS="\t"}NR==FNR{a[$1];next} !($1 in a)' "${OUT}.index" "${IN}.index" > "${TMP_PATH}/unmapped_id"
+    # shellcheck disable=SC2086 
+    "$MMSEQS" createsubdb "${TMP_PATH}/unmapped_id" "${IN}" "${IN}_unmapped" ${VERBOSITY}\
+        || fail "createsubdb failed"
+    rm -f "${TMP_PATH}/unmapped_id"
+    echo "The remaining unmapped sequences are stored in ${IN}_unmapped."
 fi
 
 if [ -n "${REMOVE_TMP}" ]; then
