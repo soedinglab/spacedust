@@ -4,44 +4,11 @@
 #include "DBWriter.h"
 #include "itoa.h"
 #include "Util.h"
-#include <cstdio>
 
 
 #ifdef OPENMP
 #include <omp.h>
 #endif
-
-
-//Aleš Berkopec, HyperQuick algorithm for discrete hypergeometric distribution, Journal of Discrete Algorithms 5 (2007) 341–347
-
-const double TOL=1E-12;
-double InvJm(int n, int x, int N, int m)
-{
-    return (1.0-double(x)/(double(m)+1.0))/(1.0-(double(n)-1.0-double(x))/(double(N)-1.0-double(m)));
-}
-
-double hyperquick(int x, int M, int N, int n)
-{
-    double s=1.0;
-    for (int k=x; k<=M-2; ++k)
-    {
-        s = s*InvJm(n,x,N,k)+1.0;
-    }
-    double ak=s;
-    double bk=s;
-    double k=M-2;
-    double epsk = 2*TOL;
-    while ((k<(N-(n-x)-1)) && epsk>TOL )
-    {
-        double ck = ak/bk;
-        k = k+1;
-        double jjm = InvJm(n,x,N,k);
-        bk = bk*jjm + 1.0;
-        ak = ak*jjm;
-        epsk = (N-(n-x)-1-k)*(ck-ak/bk);
-    }
-    return 1-(ak/bk-epsk/2);
-}
 
 // --------------------------------------------------------------------------------
 // -- Special math functions module.
@@ -140,14 +107,29 @@ double hypergeoDistribution(double* lookup, int k, int n, int N, int K){
     }
 }
 
+double hypergeoDistributionUppertail(double* lookup, int k, int n, int N, int K){
+    if(k < std::max(0,n+K-N)){
+        return 1.0;
+    }
+    else if(k > std::min(K,n)){
+        return 0.0;
+    }
+    else{
+        double sum = 0;
+        for (int i = k+1; i <= n; i++){
+            sum += hypergeoDensity(lookup, i, n, N, K);
+        }    
+        return sum;
+    }
+}
+
 double logClusterPval(double* lookup, int k, int m, int K, int Nq, int Nt) {
     size_t minKm = (K < m) ? K : m;
     double sum = 0;
     for (size_t Kp = k; Kp <= minKm; Kp++){
         double pHG = hypergeoDensity(lookup, (Kp - 1), (K - 1), (Nq - 1), (m - 1));
-        //double PHG = hypergeoDistribution(lookup, (k - 2), (Kp - 1), (Nt - 1), (m - 1));
-        double PHG = hyperquick((k - 2), (Kp - 1), (Nt - 1), (m - 1));
-        sum += pHG * (1 - pow(PHG, k));
+        double oneminusPHG = hypergeoDistributionUppertail(lookup, (k - 2), (Kp - 1), (Nt - 1), (m - 1));
+        sum += pHG * (1 - pow((1-oneminusPHG), k));
     }
     if (sum < DBL_EPSILON){
         return log(K - k  + 1) + lookup[k+1] + (k-1) * log(1.0 * K / (Nq * Nt));
