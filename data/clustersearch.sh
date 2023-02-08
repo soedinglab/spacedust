@@ -26,6 +26,7 @@ FOLDSEEK="$(pwd)"/foldseek/bin/foldseek
 if [ -n "${USE_FOLDSEEK}" ]; then 
     [ -n "${USE_PROFILE}" ] && echo "Profile cluster search with Foldseek is not supported." && exit 1;
     [ ! -f "$FOLDSEEK" ] && echo "Please make sure Foldseek is installed in the working directory." && exit 1;
+    [ ! -f "${TARGET}_foldseek.dbtype" ] && echo "${TARGET}_foldseek.dbtype not found! Please make sure the ${TARGET}_foldseek is created with aa2foldseek" && exit 1;
 fi
 
 if [ -n "${USE_PROFILE}" ]; then
@@ -69,9 +70,21 @@ if [ -n "${USE_PROFILE}" ]; then
 else
     if notExists "${TMP_PATH}/result.index"; then
         if [ -n "${USE_FOLDSEEK}" ]; then
+            if notExists "${TMP_PATH}/result_foldseek.index"; then
                 # shellcheck disable=SC2086
-            "${FOLDSEEK}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
-                || fail "foldseek search failed"
+                "${FOLDSEEK}" search "${QUERY}_foldseek" "${TARGET}_foldseek" "${TMP_PATH}/result_foldseek" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
+                    || fail "foldseek search failed"
+            fi
+            if notExists "${TMP_PATH}/result_mmseqs.index"; then
+                # shellcheck disable=SC2086
+                "${MMSEQS}" search "${QUERY}_unmapped" "${TARGET}" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/search" ${SEARCH_PAR} \
+                    || fail "mmseqs search failed"
+            fi
+            if notExists "${TMP_PATH}/result.index"; then
+                # shellcheck disable=SC2086
+                "${MMSEQS}" concatdbs "${TMP_PATH}/result_foldseek" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/result" --preserve-keys ${THREADS_PAR} \
+                    || fail "concatdbs failed"
+            fi
         else
             # shellcheck disable=SC2086
             "${MMSEQS}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${SEARCH_PAR} \
