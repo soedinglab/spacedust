@@ -9,6 +9,7 @@
 void setaa2FoldseekDefaults(Parameters *p) {
     p->exactKmerMatching = 1;
     p->maxResListLen = 10;
+    //seqid = 0.5 && cov = 0.9 for more sensitivity?
     p->seqIdThr = 0.9;
     p->covThr=0.9;
 }
@@ -18,17 +19,17 @@ int aa2foldseek(int argc, const char **argv, const Command &command) {
     setaa2FoldseekDefaults(&par);
     par.parseParameters(argc, argv, command, true, 0, 0);
 
-    if (FileUtil::directoryExists(par.db4.c_str()) == false) {
-        Debug(Debug::INFO) << "Tmp " << par.db4 << " folder does not exist or is not a directory.\n";
-        if (FileUtil::makeDir(par.db4.c_str()) == false) {
-            Debug(Debug::ERROR) << "Can not create tmp folder " << par.db4 << ".\n";
+    if (FileUtil::directoryExists(par.db3.c_str()) == false) {
+        Debug(Debug::INFO) << "Tmp " << par.db3 << " folder does not exist or is not a directory.\n";
+        if (FileUtil::makeDir(par.db3.c_str()) == false) {
+            Debug(Debug::ERROR) << "Can not create tmp folder " << par.db3 << ".\n";
             EXIT(EXIT_FAILURE);
         } else {
-            Debug(Debug::INFO) << "Created dir " << par.db4 << "\n";
+            Debug(Debug::INFO) << "Created dir " << par.db3 << "\n";
         }
     }
     size_t hash = par.hashParameter(command.databases, par.filenames, par.aa2foldseek);
-    std::string tmpDir = par.db4 + "/" + SSTR(hash);
+    std::string tmpDir = par.db3 + "/" + SSTR(hash);
     if (FileUtil::directoryExists(tmpDir.c_str()) == false) {
         if (FileUtil::makeDir(tmpDir.c_str()) == false) {
             Debug(Debug::ERROR) << "Can not create sub tmp folder " << tmpDir << ".\n";
