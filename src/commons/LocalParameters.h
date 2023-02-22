@@ -25,6 +25,7 @@ public:
     std::vector<MMseqsParameter*> combinehits;
     std::vector<MMseqsParameter*> clusterhits;
     std::vector<MMseqsParameter*> foldseeksearch;
+    std::vector<MMseqsParameter*> counthits;
 
     PARAMETER(PARAM_CLUSTERSEARCH_MODE)
     PARAMETER(PARAM_SUBOPTIMAL_HITS)
@@ -93,6 +94,11 @@ private:
         combinehits.push_back(&PARAM_COMPRESSED);
         combinehits.push_back(&PARAM_V);
 
+        // counthits
+        counthits.push_back(&PARAM_DB_OUTPUT);
+        counthits.push_back(&PARAM_THREADS);
+        counthits.push_back(&PARAM_COMPRESSED);
+        counthits.push_back(&PARAM_V);
 
         // foldseeksearch
         foldseeksearch.push_back(&PARAM_E);
@@ -100,6 +106,7 @@ private:
         foldseeksearch.push_back(&PARAM_C);
         foldseeksearch.push_back(&PARAM_COV_MODE);
         foldseeksearch.push_back(&PARAM_NUM_ITERATIONS);
+        foldseeksearch.push_back(&PARAM_MAX_SEQS);
         foldseeksearch.push_back(&PARAM_THREADS);
         foldseeksearch.push_back(&PARAM_COMPRESSED);
         foldseeksearch.push_back(&PARAM_V);
