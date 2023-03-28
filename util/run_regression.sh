@@ -11,10 +11,9 @@ BASEDIR="$3"
 mkdir -p "${BASEDIR}"
 
 "${SPACEDUST}" createsetdb ${DATA}/*.faa "${BASEDIR}/genome" "${BASEDIR}/tmp"
-"${SPACEDUST}" clustersearch "${BASEDIR}/genome" "${BASEDIR}/genome" "${BASEDIR}/result" "${BASEDIR}/tmp" --filter-self-match
+"${SPACEDUST}" clustersearch "${BASEDIR}/genome" "${BASEDIR}/genome" "${BASEDIR}/result.tsv" "${BASEDIR}/tmp" --filter-self-match
 
-
-tr -d '\000' < "${BASEDIR}/result" | awk 'END{ if (NR != 167) exit 1; }'  \
-  || fail "Check 1 failed. Expected: 167 Actual: $(tr -d '\000' < "${BASEDIR}/result" | wc -l)"
-tr -d '\000' < "${BASEDIR}/result_h" |awk '$3 < 1E-20 { cnt++; } END { if (cnt != 2) exit 1; }' \
-  || fail "Check 2 failed. Expected: 2 Actual: $(tr -d '\000' < "${BASEDIR}/result_h" | awk '$3 < 1E-20 { cnt++; } END { print cnt; }')"
+awk '/^>/ { cnt++; } END { if (cnt != 167) exit 1; }' "${BASEDIR}/result.tsv" \
+  || fail "Check 1 failed. Expected: 167 Actual: $(awk '/^>/ { cnt++; } END { print cnt; }' "${BASEDIR}/result.tsv")"
+awk '/^#/ { if ($4 < 1E-20) cnt++; } END { if (cnt != 2) exit 1; }' "${BASEDIR}/result.tsv" \
+  || fail "Check 2 failed. Expected: 2 Actual: $(awk '/^#/ { if ($4 < 1E-20) cnt++; } END { print cnt; }' "${BASEDIR}/result.tsv")"

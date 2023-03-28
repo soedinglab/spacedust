@@ -10,5 +10,6 @@ set(util_source_files
         util/Aggregation.h
         util/Aggregation.cpp
         util/ClusterHits.cpp
+        util/SummarizeResults.cpp
         PARENT_SCOPE
         )

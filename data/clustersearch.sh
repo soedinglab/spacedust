@@ -120,9 +120,13 @@ fi
 
 if notExists "${TMP_PATH}/clusters.index"; then
     # shellcheck disable=SC2086
-    "${MMSEQS}" clusterhits "${QUERY}" "${TARGET}" "${TMP_PATH}/matches" "${OUTPUT}" ${CLUSTERHITS_PAR} \
+    "${MMSEQS}" clusterhits "${QUERY}" "${TARGET}" "${TMP_PATH}/matches" "${TMP_PATH}/clusters" ${CLUSTERHITS_PAR} \
         || fail "clusterhits failed"
 fi
+
+# shellcheck disable=SC2086
+"${MMSEQS}" summarizeresults "${QUERY}" "${TARGET}" "${TMP_PATH}/clusters" "${OUTPUT}" ${THREADS_PAR} \
+    || fail "summarizeresults failed"
 
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
@@ -137,6 +141,8 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/aggregate_merged" ${VERBOSITY}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/matches" ${VERBOSITY}
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/clusters" ${VERBOSITY}
     rm -f "${TMP_PATH}/clustersearch.sh"
 fi
 
