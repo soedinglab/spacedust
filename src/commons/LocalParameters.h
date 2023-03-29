@@ -135,7 +135,7 @@ private:
 
 
         clusterSearchMode = 0;
-        suboptHitsFactor = 100;
+        suboptHitsFactor = 0;
         filterSelfMatch = 0;
         maxGeneGaps = 3;
         clusterSize = 2;
