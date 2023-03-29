@@ -122,6 +122,8 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
     }
     hdrReader.close();
     alnReader.close();
+    qlookupReader.close();
+    tlookupReader.close();
 
     return EXIT_SUCCESS;
 }
