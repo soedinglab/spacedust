@@ -120,8 +120,11 @@ elif [ "$("${MMSEQS}" dbtype "${TMP_PATH}/seqDB")" = "Aminoacid" ]; then
 	    "${MMSEQS}" mvdb "${TMP_PATH}/seqDB_h" "${OUTDB}_h" ${VERBOSITY} \
 		|| fail "mvdb failed"
 	fi
-
-    mv -f "${TMP_PATH}/seqDB.source" "${OUTDB}.source"
+    
+    # mv only if ${TMP_PATH}/seqDB.source exists
+    if [ -f "${TMP_PATH}/seqDB.source" ]; then
+        mv -f "${TMP_PATH}/seqDB.source" "${OUTDB}.source"
+    fi
 else
     fail "Input DB has the wrong type. Allowed input: Nucleotide, Aminoacid";
 fi
