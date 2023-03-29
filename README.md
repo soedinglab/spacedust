@@ -68,33 +68,34 @@ To enable protein structure search with Foldseek, the protein sequences are mapp
     path/to/foldseek databases Alphafold/UniProt refFoldseekDB tmpFolder
 
     # Convert to structure sequence DB
-    spacedust aa2foldseek setDB refFoldseekDB outDB tmpFolder
+    spacedust aa2foldseek setDB refFoldseekDB tmpFolder
 
-### Spacedust (with MMseqs2 or Foldseek)
+### Spacedust (with MMseqs2 and/or Foldseek)
 
-Spacedust will first conduct an all-against-all homology search/structure comparison between two sets of protein-coding genes derived from multiple genomes, and then find clusters of homologous hits based on conservation of gene neighborhood. Structure comparison with Foldseek is invoked by `--search-mode 1`. For a more sensitive search, iterative searches in MMseqs2 and Foldseek can be done by setting `--num-iterations`.
+Spacedust will first conduct an all-against-all homology search/structure comparison between two sets of protein-coding genes derived from multiple genomes, and then find clusters of homologous hits based on conservation of gene neighborhood. Structure comparison with Foldseek is invoked by `--search-mode 1`. The sequences which could be mapped to a structure by `aa2foldseek` will be searched with Foldseek, and the rest will be searched with MMseqs2. For a more sensitive search, iterative searches in MMseqs2 and Foldseek can be done by setting `--num-iterations`.
 
     # Search querySetDB against targetSetDB (using MMseqs)
-    spacedust clustersearch querySetDB targetSetDB resultDB tmpFolder
+    spacedust clustersearch querySetDB targetSetDB result.tsv tmpFolder
 
     # Search querySetDB against targetSetDB turned into profile
-    spacedust clustersearch querySetDB targetSetDB resultDB tmpFolder --profile-cluster-search
+    spacedust clustersearch querySetDB targetSetDB result.tsv tmpFolder --profile-cluster-search
 
     # Iterative cluster search (like PSI-BLAST) with 2 iterations
-    spacedust clustersearch querySetDB targetSetDB resultDB tmpFolder --num-iterations 2
+    spacedust clustersearch querySetDB targetSetDB result.tsv tmpFolder --num-iterations 2
 
-    # Search querySetDB against targetSetDB (using Foldseek)
-    spacedust clustersearch querySetDB targetSetDB resultDB tmpFolder --search-mode 1
+    # Search querySetDB against targetSetDB (using Foldseek and MMseqs)
+    spacedust clustersearch querySetDB targetSetDB result.tsv tmpFolder --search-mode 1
 
 ### The Spacedust output
 
-Upon completion, spacedust outputs two files: an **alignment result file** for clusters of hits (in MMseqs internal alignment format), and a **header file** (`_h`) describing each cluster. Each cluster entry is separated by a \0 byte. Each line in the alignment file describes an individual hit, i.e. one target sequence aligned to the query, which has the following columns separated by tab characters:
+Upon completion, Spacedust outputs a tab-separated text file (`.tsv`). Each reported cluster consist of one summary line followed by multiple lines, one line for each pairwise hit between the query and target genome.
 
-    queryID  targetID  bestHitPvalue  seqIdentity  eVal  qStart  qEnd  qLen  tStart  tEnd  tLen  alnCigar
+    #clusterID  query_acc  target_acc   clusterMatchPvalue multihitPvalue  num_hits
+    >queryID    targetID    bestHitPvalue   seqIdentity eVal    qStart  qEnd    qLen    tStart  tEnd    tLen    alnCigar
 
-The rest of the columns are described in the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki#internal-alignment-format).
+The summary line starts with `#`: a unique cluster ID, query genome accession, target genome accession, cluster match P-value (joint P-value of clustering and ordering), multihit P-value and number of hits in the cluster.
 
-Each line in the header file describes an individual cluster of hits. The columns of header file: query genome ID, target genome ID, cluster match P-value, multihit E-value and number of hits in the cluster.
+Each following line starts with `>` and describes an individual member hit of the cluster (i.e. one target sequence aligned to the query) in MMseqs2 alignment-result-like format, which has the following columns separated by tab characters: query protein ID, target protein ID, besthit P-value, sequence identity, pairwise E-value, query protein start, end and length, target protein start, end and length, alnCigar, which is a string that encodes the alignment in compressed format. The columns are further described in the [MMseqs2 wiki](https://github.com/soedinglab/MMseqs2/wiki#internal-alignment-format). The query and target protein IDs contain the accession, protein position index, start and end coordinates (end and start coordinates if on reverse strand), separated by `_`.
 
 ### Removing temporary files
 
