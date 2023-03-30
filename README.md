@@ -2,7 +2,7 @@
 
 Spacedust is a modular toolkit for identification of conserved gene clusters among multiple genomes based on homology and conservation of gene neighborhood. Spacedust adapts the fast and sensitive structure comparisons of [Foldseek](https://github.com/steineggerlab/foldseek) and homology search capabilities of [MMseqs2](https://github.com/soedinglab/MMseqs2). It introduces a novel approach of aggregating sets of homologous hits between pairs of genomes and identifies cluster of hits with conserved gene neighborhood between each using agglomerative hierarchical clustering algorithm. Spacedust is GPLv3-licensed open source software implemented in C++ and available for Linux and macOS. The software is designed to run efficiently on multiple cores.
 
-<p align="center"><img src="https://github.com/soedinglab/spacedust/blob/master/.github/spacedust.png" height="250"/></p>
+<p align="center"><img src="https://github.com/soedinglab/spacedust/blob/master/.github/spacedust.png" height="350"/></p>
 
 ## Installation
 
