@@ -11,4 +11,5 @@ extern int clusterhits(int argc, const char **argv, const Command& command);
 extern int besthitbyset(int argc, const char **argv, const Command &command);
 extern int combinehits(int argc, const char **argv, const Command &command);
 extern int summarizeresults(int argc, const char **argv, const Command &command);
+extern int clusterdb(int argc, const char **argv, const Command &command);
 #endif

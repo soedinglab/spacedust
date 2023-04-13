@@ -45,6 +45,13 @@ std::vector<Command> commands = {
                 CITATION_MMSEQS2, {{"inputDB", DbType::ACCESS_MODE_INPUT,  DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
+        {"clusterdb",           clusterdb,           &localPar.clusterdb,           COMMAND_MAIN,
+                "Cluster a sequence DB or foldseek structure DB",
+                NULL,
+                "Ruoshi Zhang <ruoshi.zhang@mpinat.mpg.de> & Milot Mirdita <milot@mirdita.de>",
+                "<i:inputDB> <tmpDir>",
+                CITATION_MMSEQS2, {{"inputDB", DbType::ACCESS_MODE_INPUT,  DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
 
         {"clustersearch",       clustersearch,       &localPar.clustersearchworkflow,       COMMAND_MAIN,
                 "Find clusters of colocalized hits between any query-target sequence/profile set database",

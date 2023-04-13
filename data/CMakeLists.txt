@@ -4,6 +4,7 @@ set(COMPILED_RESOURCES
         createsetdb.sh
         clustersearch.sh
         aa2foldseek.sh
+        clusterdb.sh
         )
 
 set(GENERATED_OUTPUT_HEADERS "")

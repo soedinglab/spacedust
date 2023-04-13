@@ -26,6 +26,7 @@ public:
     std::vector<MMseqsParameter*> clusterhits;
     std::vector<MMseqsParameter*> foldseeksearch;
     std::vector<MMseqsParameter*> counthits;
+    std::vector<MMseqsParameter*> clusterdb;
 
     PARAMETER(PARAM_CLUSTERSEARCH_MODE)
     PARAMETER(PARAM_SUBOPTIMAL_HITS)
@@ -133,6 +134,9 @@ private:
         aa2foldseek.push_back(&PARAM_THREADS);
         aa2foldseek.push_back(&PARAM_V);
 
+        //clusterdb
+        clusterdb = combineList(clusterworkflow, profile2seq);
+        clusterdb.push_back(&PARAM_CLUSTERSEARCH_MODE);
 
         clusterSearchMode = 0;
         suboptHitsFactor = 0;
