@@ -62,7 +62,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
             progress.updateProgress();
 
             unsigned int matchKey = hdrReader.getDbKey(id);
-            char *alnData = alnReader.getData(id, thread_idx);
+            char *alnData = alnReader.getData(matchKey, thread_idx);
             char *matchData = hdrReader.getData(id, thread_idx);
             while (*matchData != '\0') {
                 size_t columns = Util::getWordsOfLine(matchData, entry, 255);
@@ -75,7 +75,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
                 size_t qsetid =  Util::fast_atoi<unsigned int>(entry[0]);
                 size_t tsetid =  Util::fast_atoi<unsigned int>(entry[1]);
                 buffer.append("#");
-                buffer.append(SSTR(id));
+                buffer.append(SSTR(matchKey));
                 buffer.append("\t");
                 buffer.append(SSTR(qSetToSource[qsetid]));
                 buffer.append("\t");
