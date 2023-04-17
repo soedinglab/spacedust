@@ -7,11 +7,7 @@
 #include "clusterdb.sh.h"
 
 void setclusterDbDefaults(LocalParameters *p) {
-    if(p->clusterSearchMode == 1){
-        p->seqIdThr = 0.5;
-    }else{
-        p->seqIdThr = 0.7;
-    }
+    p->seqIdThr = 0.7;
     p->covThr=0.8;
     p->covMode = Parameters::COV_MODE_BIDIRECTIONAL;
 }
