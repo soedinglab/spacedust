@@ -28,8 +28,8 @@ if [ -n "${USE_FOLDSEEK}" ]; then
 
     if notExists "${IN}_clu.dbtype"; then
         # shellcheck disable=SC2086
-        "${FOLDSEEK}" createclustersearchdb "${IN}" "${TMP_PATH}/cluster_foldseek" "${IN}_clu" "${TMP_PATH}" ${THREADS_PAR} \
-            || fail "foldseek createclustersearchdb failed"
+        "${FOLDSEEK}" createclusearchdb "${IN}" "${TMP_PATH}/cluster_foldseek" "${IN}_clu" "${TMP_PATH}" ${THREADS_PAR} \
+            || fail "foldseek createclusearchdb failed"
     fi
 else
     if notExists "${TMP_PATH}/cluster_mmseqs.dbtype"; then
