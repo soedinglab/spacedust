@@ -24,47 +24,51 @@ TMP_PATH="$4"
 FOLDSEEK="$(pwd)"/foldseek/bin/foldseek
 
 if [ -n "${USE_FOLDSEEK}" ]; then 
-    [ -n "${USE_PROFILE}" ] && echo "Profile cluster search with Foldseek is not supported." && exit 1;
+    [ -n "${USE_PROFILE}" ] && [ ! -f "${TARGET}_foldseek_clu_seq.dbtype" ] && echo "${TARGET}_foldseek_clu_seq.dbtype not found! Please make sure the ${TARGET}_foldseek is clustered with clusterdb ${TARGET}_foldseek tmp --search-mode 1" && exit 1;
     [ ! -f "$FOLDSEEK" ] && echo "Please make sure Foldseek is installed in the working directory." && exit 1;
     [ ! -f "${TARGET}_foldseek.dbtype" ] && echo "${TARGET}_foldseek.dbtype not found! Please make sure the ${TARGET}_foldseek is created with aa2foldseek" && exit 1;
 fi
 
 if [ -n "${USE_PROFILE}" ]; then
-    if notExists "${TARGET}_clu.index"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" cluster "${TARGET}" "${TARGET}_clu" "${TMP_PATH}/cluster" ${CLUSTER_PAR} \
-            || fail "cluster failed"
-    fi
+    if [ -n "${USE_FOLDSEEK}" ]; then
+        if notExists "${TMP_PATH}/result_foldseek.index"; then
+            # shellcheck disable=SC2086
+            "${FOLDSEEK}" search "${QUERY}_foldseek" "${TARGET}_foldseek_clu" "${TMP_PATH}/result_foldseek" "${TMP_PATH}/search" --cluster-search 1 ${FOLDSEEKSEARCH_PAR}\
+                || fail "foldseek search failed"
+        fi
+        if notExists "${TMP_PATH}/result_clu.index"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" search "${QUERY}_unmapped" "${TARGET}_clu" "${TMP_PATH}/result_clu" "${TMP_PATH}/search" ${SEARCH_PAR} \
+                || fail "mmseqs search failed"
+        fi
+        if notExists "${TMP_PATH}/result_exp.index"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" expandaln "${QUERY}_unmapped" "${TARGET}_clu" "${TMP_PATH}/result_clu" "${TARGET}_clu_aln" "${TMP_PATH}/result_exp" ${THREADS_PAR} \
+                || fail "expandaln failed"
+        fi
+        if notExists "${TMP_PATH}/result_mmseqs.index"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" align "${QUERY}_unmapped" "${TARGET}" "${TMP_PATH}/result_exp" "${TMP_PATH}/result_mmseqs" -a --alt-ali 10 ${THREADS_PAR} \
+                || fail "realign failed"
+        fi
+        if notExists "${TMP_PATH}/result.index"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" concatdbs "${TMP_PATH}/result_foldseek" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/result" --preserve-keys ${THREADS_PAR} \
+                || fail "concatdbs failed"
+        fi
+    else
+        if notExists "${TMP_PATH}/result_clu.index"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" search "${QUERY}" "${TARGET}_clu_rep_profile" "${TMP_PATH}/result_clu" "${TMP_PATH}/search" ${SEARCH_PAR} \
+                || fail "search failed"
+        fi
 
-    if notExists "${TARGET}_clu_rep.index"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" createsubdb "${TARGET}_clu" "${TARGET}" "${TARGET}_clu_rep" ${VERBOSITY}\
-            || fail "createsubdb failed"
-    fi
-
-    if notExists "${TARGET}_clu_rep_profile.index"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" result2profile "${TARGET}_clu_rep" "${TARGET}" "${TARGET}_clu" "${TARGET}_clu_rep_profile" ${THREADS_PAR}\
-            || fail "result2profile failed"
-    fi
-
-    if notExists "${TMP_PATH}/result_clu.index"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" search "${QUERY}" "${TARGET}_clu_rep_profile" "${TMP_PATH}/result_clu" "${TMP_PATH}/search" ${SEARCH_PAR} \
-            || fail "search failed"
-    fi
-
-    #expandaln?
-    if notExists "${TARGET}_clu_aln.index"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" align "${TARGET}" "${TARGET}" "${TARGET}_clu" "${TARGET}_clu_aln" -a ${THREADS_PAR} \
-            || fail "align failed"
-    fi
-
-    if notExists "${TMP_PATH}/result.index"; then
-        # shellcheck disable=SC2086
-        "${MMSEQS}" expandaln "${QUERY}" "${TARGET}_clu_rep_profile" "${TMP_PATH}/result_clu" "${TARGET}_clu_aln" "${TMP_PATH}/result" ${THREADS_PAR} \
-            || fail "expandaln failed"
+        #realignment?
+        if notExists "${TMP_PATH}/result.index"; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" expandaln "${QUERY}" "${TARGET}_clu_rep_profile" "${TMP_PATH}/result_clu" "${TARGET}_clu_aln" "${TMP_PATH}/result" ${THREADS_PAR} \
+                || fail "expandaln failed"
+        fi
     fi
 
 else
@@ -127,6 +131,19 @@ fi
 # shellcheck disable=SC2086
 "${MMSEQS}" summarizeresults "${QUERY}" "${TARGET}" "${TMP_PATH}/clusters" "${OUTPUT}" ${THREADS_PAR} \
     || fail "summarizeresults failed"
+
+#postprocessing
+if notExists "${TMP_PATH}/clu_to_seq.index"; then
+    # shellcheck disable=SC2086
+    "${MMSEQS}" filterdb "${TMP_PATH}/clusters" "${TMP_PATH}/clu_to_seq" --trim-to-one-column ${THREADS_PAR} \
+        || fail "filterdb failed"
+fi
+
+if notExists "${TMP_PATH}/seq_to_clu.index"; then
+    # shellcheck disable=SC2086
+    "${MMSEQS}" swapdb "${TMP_PATH}/clu_to_seq" "${OUTPUT}_seq_to_clu" ${THREADS_PAR} \
+        || fail "swapdb failed"
+fi
 
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
