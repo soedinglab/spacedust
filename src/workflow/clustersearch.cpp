@@ -28,7 +28,11 @@ void setClusterSearchWorkflowDefaults(LocalParameters *p) {
     p->dbOut = 1;
     //profile-sequence clustersearch
     if(p->profileClusterSearch == 1){
-        p->exhaustiveSearch = 1;
+        if(p->searchType==0){
+            p->exhaustiveSearch = 1;
+        }
+        p->evalThr = 0.001;
+        p->maxResListLen = 100;
     }
 }
 

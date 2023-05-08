@@ -13,7 +13,7 @@ mkdir -p "${BASEDIR}"
 "${SPACEDUST}" createsetdb ${DATA}/*.faa "${BASEDIR}/genome" "${BASEDIR}/tmp"
 "${SPACEDUST}" clustersearch "${BASEDIR}/genome" "${BASEDIR}/genome" "${BASEDIR}/result.tsv" "${BASEDIR}/tmp" --filter-self-match
 
-awk '/^>/ { cnt++; } END { if (cnt != 160) exit 1; }' "${BASEDIR}/result.tsv" \
-  || fail "Check 1 failed. Expected: 167 Actual: $(awk '/^>/ { cnt++; } END { print cnt; }' "${BASEDIR}/result.tsv")"
+awk '/^>/ { cnt++; } END { if (cnt != 154) exit 1; }' "${BASEDIR}/result.tsv" \
+  || fail "Check 1 failed. Expected: 154 Actual: $(awk '/^>/ { cnt++; } END { print cnt; }' "${BASEDIR}/result.tsv")"
 awk '/^#/ { if ($4 < 1E-20) cnt++; } END { if (cnt != 2) exit 1; }' "${BASEDIR}/result.tsv" \
   || fail "Check 2 failed. Expected: 2 Actual: $(awk '/^#/ { if ($4 < 1E-20) cnt++; } END { print cnt; }' "${BASEDIR}/result.tsv")"

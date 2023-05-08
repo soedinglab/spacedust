@@ -145,7 +145,7 @@ private:
         clusterSize = 2;
         pMHThr = 0.01;
         pCluThr = 0.01;
-        clusterUseWeight = 1;
+        clusterUseWeight = 0;
         profileClusterSearch = 0;
         gffDir = "";
 
