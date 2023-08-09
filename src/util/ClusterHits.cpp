@@ -77,72 +77,9 @@ bool operator<(const hit& a, const hit& b)
     return a.qPos < b.qPos;
 }
 
-//Log of binomial coefficient as defined in combinepvalperset
-double LBinCoeff(double* lookup, int M, int k);
-
-
-double hypergeoDensity(double* lookup, int k, int n, int N, int K){
-    if(k < std::max(0,n+K-N) || k > std::min(K,n)){
-        return 0.0;
-    }
-    else{
-        return exp(LBinCoeff(lookup, n, k) + LBinCoeff(lookup, N - n, K - k) - LBinCoeff(lookup, N, K));
-    }
+double logClusterPval(double* lookup, int k, int m, double q0 = 0.001) {
+    return 2*lookup[m+1] -2*lookup[m-k+1] - lookup[k+1] + k * log(q0);
 }
-
-//Questionable?
-double hypergeoDistribution(double* lookup, int k, int n, int N, int K){
-    if(k < std::max(0,n+K-N)){
-        return 0.0;
-    }
-    else if(k > std::min(K,n)){
-        return 1.0;
-    }
-    else{
-        double sum = 0;
-        for (int i = 0; i < k + 1; i++){
-            sum += hypergeoDensity(lookup, i, n, N, K);
-        }
-        return sum < 1.0 ? sum : 1.0;
-    }
-}
-
-double hypergeoDistributionUppertail(double* lookup, int k, int n, int N, int K){
-    if(k < std::max(0,n+K-N)){
-        return 1.0;
-    }
-    else if(k > std::min(K,n)){
-        return 0.0;
-    }
-    else{
-        double sum = 0;
-        for (int i = k+1; i <= n; i++){
-            sum += hypergeoDensity(lookup, i, n, N, K);
-        }    
-        return sum;
-    }
-}
-
-double logClusterPval(double* lookup, int k, int m, int K, int Nq, int Nt) {
-    size_t minKm = (K < m) ? K : m;
-    double sum = 0;
-    for (size_t Kp = k; Kp <= minKm; Kp++){
-        double pHG = hypergeoDensity(lookup, (Kp - 1), (K - 1), (Nq - 1), (m - 1));
-        double oneminusPHG = hypergeoDistributionUppertail(lookup, (k - 2), (Kp - 1), (Nt - 1), (m - 1));
-        sum += pHG * (1 - pow((1-oneminusPHG), k));
-    }
-    if (sum < DBL_EPSILON){
-        return log(K - k  + 1) + lookup[k+1] + (k-1) * log(1.0 * K / (Nq * Nt));
-    } else {
-        return log(1 - pow((1 - sum), (K - k + 1)));
-    }
-}
-
-double clusterPval_fast(int m, int K, int Nq, int Nt) {
-    double power = 2.0 * pow((m - 1), 2) * (K - 1);
-    return 1 - pow((1 - 1.0 * K / (Nq * Nt)), power);
-}
-
 
 double logOrderingPval(double* lookup, int k, int m){
     return log(1 - 1.0 * m / k) - m * log(2) - lookup[m+1];
@@ -179,14 +116,9 @@ int findConservedPairs(std::vector<hit> &cluster){
     return m;
 }
 
-double computeWeight(double* lookup, int k, int K, int Nq, int Nt){
-    double factorNqNtK = 1.0 * Nq * Nt / K;
-    double w = (-log(K-k+1) - lookup[k+1] + (k-1) * log(factorNqNtK)) / (-log(K-k+1) + (k-1) * log(2 * factorNqNtK));
-    return w;
-}
 
-double clusterMatchScore(double* lookup, std::vector<hit> &cluster, int K, int Nq, int Nt, bool useWeight){
-    if(cluster.size()== 0 ){
+double clusterMatchScore(double* lookup, std::vector<hit> &cluster){
+    if(cluster.size()== 0){
         return 0.0;
     }
     else {
@@ -195,21 +127,9 @@ double clusterMatchScore(double* lookup, std::vector<hit> &cluster, int K, int N
         double logpClu;
         double logpOrd;
         int m = findConservedPairs(cluster);
-        if(k == 2){
-            logpClu = log(clusterPval_fast(span, K, Nq, Nt));
-            logpOrd = logOrderingPval(lookup, k, m);
-        }
-        else{
-            logpClu = logClusterPval(lookup, k, span, K, Nq, Nt);
-            logpOrd = logOrderingPval(lookup, k, m);
-        }
-        if (useWeight) {
-            double w = computeWeight(lookup, k, K, Nq, Nt);
-            //full score would be: -log(pClu) - log(pOrd) + log(1 -log(pClu) - log(pOrd))
-            return - w * logpClu - (1 - w) * logpOrd;
-        } else {
-            return - 0.5 * logpClu - 0.5 * logpOrd;
-        }
+        logpClu = logClusterPval(lookup, k, span);//, K, Nq, Nt);
+        logpOrd = logOrderingPval(lookup, k, m);
+        return - 0.5 * logpClu - 0.5 * logpOrd;
     }
 }
 
@@ -387,7 +307,7 @@ unsigned int cluster_idx = 0;
             unsigned int qSet = Util::fast_atoi<size_t>(hdrcolumns[0].c_str());
             unsigned int tSet = Util::fast_atoi<size_t>(hdrcolumns[1].c_str());
             unsigned int Nq = Util::fast_atoi<size_t>(hdrcolumns[2].c_str()); //query set size
-            unsigned int Nt = Util::fast_atoi<size_t>(hdrcolumns[3].c_str()); //target set size
+            // unsigned int Nt = Util::fast_atoi<size_t>(hdrcolumns[3].c_str()); //target set size
             hdrcolumns.clear();
             header.clear();
 
@@ -461,7 +381,7 @@ unsigned int cluster_idx = 0;
                     }
                     else{
                         std::vector<hit> tmpCluster = groupNodes(nodes,match,i,j,d);
-                        DistMat[i][j] = clusterMatchScore(lGammaLookup,tmpCluster,K,Nq,Nt,par.clusterUseWeight);//score(i,j)
+                        DistMat[i][j] = clusterMatchScore(lGammaLookup,tmpCluster);//score(i,j)
                     }
                     dmin[i] = (DistMat[i][j] > DistMat[i][dmin[i]]) ? j : dmin[i];
                 }
@@ -471,12 +391,7 @@ unsigned int cluster_idx = 0;
             double maxScore = DBL_MAX;
             bool isFirstIter = true;
             double sMin;
-            if(par.clusterUseWeight){
-                double w = computeWeight(lGammaLookup, 2, K, Nq, Nt);
-                sMin  = -w * log(clusterPval_fast(d+1, K, Nq, Nt)) - (1-w)* logOrderingPval(lGammaLookup,2,1);
-            } else{
-                sMin  = - 0.5 * log(clusterPval_fast(d+1, K, Nq, Nt)) - 0.5 * logOrderingPval(lGammaLookup,2,1);
-            }
+            sMin  = - 0.5 * logClusterPval(lGammaLookup,2,d+1) - 0.5 * logOrderingPval(lGammaLookup,2,1);
             while(isFirstIter|| (maxScore >= sMin)){
                 size_t i1 = 0;
                 size_t i2 = 0;
@@ -512,7 +427,7 @@ unsigned int cluster_idx = 0;
                     }
                     else{
                         std::vector<hit> tmpCluster = groupNodes(nodes,match,i1,j,d);
-                        DistMat[i1][j] = clusterMatchScore(lGammaLookup,tmpCluster,K,Nq,Nt,par.clusterUseWeight);
+                        DistMat[i1][j] = clusterMatchScore(lGammaLookup,tmpCluster);
                         DistMat[j][i1] = DistMat[i1][j];
                     }
 
@@ -544,9 +459,9 @@ unsigned int cluster_idx = 0;
                     for(size_t j = 0; j < nodes[i].size(); j++){
                         cluster.push_back(match[nodes[i][j]]);
                     }
-                    double pCO = exp(-clusterMatchScore(lGammaLookup, cluster, K, Nq, Nt, par.clusterUseWeight));
+                    double pCO = exp(-clusterMatchScore(lGammaLookup, cluster));
                     double pMH = multihitPval(lGammaLookup, cluster, Nq, par.alpha);
-                    if(pCO < par.pCluThr && (pMH < par.pMHThr)){ // par.pCluThr,par.pMultiHitThr;
+                    if(pCO <= par.pCluThr && (pMH <= par.pMHThr)){
                         headerBuffer.append(SSTR(qSet));
                         headerBuffer.append("\t");
                         headerBuffer.append(SSTR(tSet));
@@ -576,6 +491,7 @@ unsigned int cluster_idx = 0;
             match.clear();
         }
     }
+    //do not merge since it's not the last step?
     writer.close(true);
     if (isDb == false) {
         FileUtil::remove(par.db4Index.c_str());

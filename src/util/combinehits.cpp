@@ -98,7 +98,7 @@ public:
 
         //0) multihit P-values
         if(aggregationMode == Parameters::AGGREGATION_MODE_MULTIHIT){
-            double pvalThreshold = alpha / (orfCount + 1);
+            double pvalThreshold = 10e-7;//alpha / (orfCount + 1);
 
             //multihit edge case p0 = 0
             if (pvalThreshold == 0.0) {
