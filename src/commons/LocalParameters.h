@@ -130,9 +130,6 @@ private:
         aa2foldseek = combineList(prefilter, align);
         aa2foldseek = combineList(aa2foldseek,result2stats);
         aa2foldseek.push_back(&PARAM_REMOVE_TMP_FILES);
-        aa2foldseek.push_back(&PARAM_COMPRESSED);
-        aa2foldseek.push_back(&PARAM_THREADS);
-        aa2foldseek.push_back(&PARAM_V);
 
         //clusterdb
         clusterdb = combineList(clusterworkflow, profile2seq);
