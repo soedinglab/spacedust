@@ -4,6 +4,8 @@ Spacedust is a modular toolkit for identification of conserved gene clusters amo
 
 <p align="center"><img src="https://github.com/soedinglab/spacedust/blob/master/.github/spacedust.png" height="350"/></p>
 
+[Zhang, R., Mirdita, M., & Söding, J. De novo discovery of conserved gene clusters in microbial genomes with Spacedust. bioRxiv, doi: 10.1101/2024.10.02.616292(2024).](https://www.biorxiv.org/content/10.1101/2024.10.02.616292)
+
 ## Installation
 
 Spacedust can be used by downloading a [statically compiled version](https://mmseqs.com/spacedust/) or [compiling from source](#compile-from-source). It requires a 64-bit system (check with `uname -a | grep x86_64`) with at least the SSE4.1 instruction set (check by executing `cat /proc/cpuinfo | grep sse4_1` on Linux or `sysctl -a | grep machdep.cpu.features | grep SSE4.1` on MacOS).
