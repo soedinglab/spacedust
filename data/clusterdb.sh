@@ -28,7 +28,7 @@ if [ -n "${USE_FOLDSEEK}" ]; then
 
     if notExists "${IN}_clu.dbtype"; then
         # shellcheck disable=SC2086
-        "${FOLDSEEK}" createclusearchdb "${IN}" "${TMP_PATH}/cluster_foldseek" "${IN}_clu" "${TMP_PATH}" ${THREADS_PAR} \
+        "${FOLDSEEK}" createclusearchdb "${IN}" "${TMP_PATH}/cluster_foldseek" "${IN}_clu" ${THREADS_PAR} \
             || fail "foldseek createclusearchdb failed"
     fi
 else
@@ -50,7 +50,7 @@ else
             || fail "result2profile failed"
     fi
 
-    if notExists "${IN}.dbtype"; then
+    if notExists "${IN}_clu.dbtype"; then
         # shellcheck disable=SC2086
         "${MMSEQS}" profile2consensus "${IN}_clu_rep_profile" "${IN}_clu" ${CONSENSUS_PAR}\
             || fail "profile2consensus failed"
