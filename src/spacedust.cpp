@@ -83,7 +83,7 @@ std::vector<Command> commands = {
                                                            {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                                            {"pvalDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"summarizeresults",    summarizeresults,    &localPar.summarizeresults,     COMMAND_SPECIAL | COMMAND_EXPERT,
+        {"summarizeresults",    summarizeresults,    &localPar.clusterhits,     COMMAND_SPECIAL | COMMAND_EXPERT,
                 "Summarize results on clustered hits",
                 NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpinat.mpg.de>",

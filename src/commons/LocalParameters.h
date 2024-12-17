@@ -24,7 +24,6 @@ public:
     std::vector<MMseqsParameter*> besthitbyset;
     std::vector<MMseqsParameter*> combinehits;
     std::vector<MMseqsParameter*> clusterhits;
-    std::vector<MMseqsParameter*> summarizeresults;
     std::vector<MMseqsParameter*> foldseeksearch;
     std::vector<MMseqsParameter*> counthits;
     std::vector<MMseqsParameter*> clusterdb;
@@ -41,8 +40,6 @@ public:
     PARAMETER(PARAM_GFF_DIR)
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
-    PARAMETER(PARAM_CLUSTER_FORMAT_MODE)
-
 
     int clusterSearchMode;
     float pMHThr;
@@ -56,7 +53,6 @@ public:
     int suboptHitsFactor;
     std::string fileInclude;
     std::string fileExclude;
-    int fmtMode;
 
 private:
     LocalParameters() : 
@@ -72,8 +68,7 @@ private:
         PARAM_PROFILE_CLUSTER_SEARCH(PARAM_PROFILE_CLUSTER_SEARCH_ID, "--profile-cluster-search", "Cluster search against profiles", "Perform profile(target)-sequence searches in clustersearch", typeid(bool), (void *) &profileClusterSearch, ""),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
-        PARAM_GFF_DIR(PARAM_GFF_DIR_ID, "--gff-dir", "gff dir file", "Path to gff dir file", typeid(std::string), (void *) &gffDir, ""),
-        PARAM_CLUSTER_FORMAT_MODE(PARAM_CLUSTER_FORMAT_MODE_ID, "--cluster-format", "Cluster result format ", "Output format of cluster result. 0: TSV, 1: Pretty HTML", typeid(int), (void *) &fmtMode, "^[0-1]{1}")
+        PARAM_GFF_DIR(PARAM_GFF_DIR_ID, "--gff-dir", "gff dir file", "Path to gff dir file", typeid(std::string), (void *) &gffDir, "")
     {
 
         // clusterhits
@@ -110,12 +105,6 @@ private:
         counthits.push_back(&PARAM_THREADS);
         counthits.push_back(&PARAM_COMPRESSED);
         counthits.push_back(&PARAM_V);
-
-        // summarizeresults
-        //summarizeresults.push_back(&PARAM_CLUSTER_FORMAT_MODE);
-        summarizeresults.push_back(&PARAM_THREADS);
-        summarizeresults.push_back(&PARAM_COMPRESSED);
-        summarizeresults.push_back(&PARAM_V);
 
         // foldseeksearch
         foldseeksearch.push_back(&PARAM_E);
@@ -165,7 +154,6 @@ private:
         fileInclude = ".*";
         fileExclude = "^$";
         gffDir = "";
-        fmtMode = 0;
 
         //TODO: add citations (foldseek & mmseqs & clustersearch)
         citations.emplace(CITATION_SPACEDUST, "");
