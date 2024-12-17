@@ -18,6 +18,8 @@ std::vector<DatabaseDownload> externalDownloads = {};
 std::vector<KmerThreshold> externalThreshold = {};
 bool hide_base_downloads = false;
 
+std::vector<int> FlatfileAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_DIRECTORY};
+
 LocalParameters& localPar = LocalParameters::getLocalInstance();
 std::vector<Command> commands = {
         // {"easy-search",             easysearch,           &localPar.easyclustersearch, COMMAND_EASY,
@@ -33,8 +35,8 @@ std::vector<Command> commands = {
                 "Create sequence set database from FASTA (and GFF3) input of contigs/genomes",
                 NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpinat.mpg.de> & Milot Mirdita <milot@mirdita.de>",
-                "<i:fastaFile1[.gz|bz2]> ... <i:fastaFileN[.gz|bz2]> <o:setDB> <tmpDir>",
-                CITATION_MMSEQS2, {{"fast[a|q]File[.gz|bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfile },
+                "<i:fastaFile1[.gz|bz2]> ... <i:fastaFileN[.gz|bz2]>|<directory>|<listOfFastaFiles.tsv> <o:setDB> <tmpDir>",
+                CITATION_MMSEQS2, {{"fast[a|q]File[.gz|bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &FlatfileAndFolder },
                                                            {"setDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
         {"aa2foldseek",           aa2foldseek,           &localPar.aa2foldseek,           COMMAND_MAIN,
@@ -81,7 +83,7 @@ std::vector<Command> commands = {
                                                            {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                                            {"pvalDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"summarizeresults",    summarizeresults,    &localPar.counthits,     COMMAND_SPECIAL | COMMAND_EXPERT,
+        {"summarizeresults",    summarizeresults,    &localPar.summarizeresults,     COMMAND_SPECIAL | COMMAND_EXPERT,
                 "Summarize results on clustered hits",
                 NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpinat.mpg.de>",

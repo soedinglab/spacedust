@@ -24,6 +24,7 @@ public:
     std::vector<MMseqsParameter*> besthitbyset;
     std::vector<MMseqsParameter*> combinehits;
     std::vector<MMseqsParameter*> clusterhits;
+    std::vector<MMseqsParameter*> summarizeresults;
     std::vector<MMseqsParameter*> foldseeksearch;
     std::vector<MMseqsParameter*> counthits;
     std::vector<MMseqsParameter*> clusterdb;
@@ -38,6 +39,9 @@ public:
     PARAMETER(PARAM_CLUSTER_USE_WEIGHT)
     PARAMETER(PARAM_PROFILE_CLUSTER_SEARCH)
     PARAMETER(PARAM_GFF_DIR)
+    PARAMETER(PARAM_FILE_INCLUDE)
+    PARAMETER(PARAM_FILE_EXCLUDE)
+    PARAMETER(PARAM_CLUSTER_FORMAT_MODE)
 
 
     int clusterSearchMode;
@@ -50,7 +54,10 @@ public:
     std::string gffDir;
     bool filterSelfMatch;
     int suboptHitsFactor;
-    
+    std::string fileInclude;
+    std::string fileExclude;
+    int fmtMode;
+
 private:
     LocalParameters() : 
         Parameters(),
@@ -63,7 +70,10 @@ private:
         PARAM_CLUSTER_SIZE(PARAM_CLUSTER_SIZE_ID, "--cluster-size", "Minimal cluster size", "Minimum number of genes to define cluster", typeid(int), (void *) &clusterSize, "^[1-9]{1}[0-9]*$"),
         PARAM_CLUSTER_USE_WEIGHT(PARAM_CLUSTER_USE_WEIGHT_ID, "--cluster-use-weight", "Cluster weighting factor ", "Use weighting factor to calculate cluster match score", typeid(bool), (void *) &clusterUseWeight, ""),
         PARAM_PROFILE_CLUSTER_SEARCH(PARAM_PROFILE_CLUSTER_SEARCH_ID, "--profile-cluster-search", "Cluster search against profiles", "Perform profile(target)-sequence searches in clustersearch", typeid(bool), (void *) &profileClusterSearch, ""),
-        PARAM_GFF_DIR(PARAM_GFF_DIR_ID, "--gff-dir", "gff dir file", "Path to gff dir file", typeid(std::string), (void *) &gffDir, "")
+        PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
+        PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
+        PARAM_GFF_DIR(PARAM_GFF_DIR_ID, "--gff-dir", "gff dir file", "Path to gff dir file", typeid(std::string), (void *) &gffDir, ""),
+        PARAM_CLUSTER_FORMAT_MODE(PARAM_CLUSTER_FORMAT_MODE_ID, "--cluster-format", "Cluster result format ", "Output format of cluster result. 0: TSV, 1: Pretty HTML", typeid(int), (void *) &fmtMode, "^[0-1]{1}")
     {
 
         // clusterhits
@@ -101,6 +111,12 @@ private:
         counthits.push_back(&PARAM_COMPRESSED);
         counthits.push_back(&PARAM_V);
 
+        // summarizeresults
+        //summarizeresults.push_back(&PARAM_CLUSTER_FORMAT_MODE);
+        summarizeresults.push_back(&PARAM_THREADS);
+        summarizeresults.push_back(&PARAM_COMPRESSED);
+        summarizeresults.push_back(&PARAM_V);
+
         // foldseeksearch
         foldseeksearch.push_back(&PARAM_E);
         foldseeksearch.push_back(&PARAM_ADD_BACKTRACE);
@@ -117,6 +133,8 @@ private:
         createsetdb = combineList(createsetdb, translatenucs);
         createsetdb = combineList(createsetdb, gff2db);
         createsetdb = combineList(createsetdb, result2stats);
+        createsetdb.push_back(&PARAM_FILE_INCLUDE);
+        createsetdb.push_back(&PARAM_FILE_EXCLUDE);
         createsetdb.push_back(&PARAM_GFF_DIR);
 
         // multi hit search
@@ -144,7 +162,10 @@ private:
         pCluThr = 0.01;
         clusterUseWeight = 0;
         profileClusterSearch = 0;
+        fileInclude = ".*";
+        fileExclude = "^$";
         gffDir = "";
+        fmtMode = 0;
 
         //TODO: add citations (foldseek & mmseqs & clustersearch)
         citations.emplace(CITATION_SPACEDUST, "");
