@@ -130,9 +130,9 @@ jobs:
           artifactName: spacedust-linux-$(SIMD)
 
   - job: build_macos
-    displayName: macOS 12
+    displayName: macOS
     pool:
-      vmImage: 'macos-12'
+      vmImage: 'macos-latest'
     steps:
       - checkout: self
         submodules: true
