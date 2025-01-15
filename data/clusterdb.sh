@@ -16,7 +16,6 @@ if [ -n "${USE_FOLDSEEK}" ]; then
     [ ! -f "$FOLDSEEK" ] && echo "Please make sure Foldseek is installed in the working directory." && exit 1;
     [ ! -f "${IN}_h.dbtype" ] && echo "${IN}_h.dbtype not found!" && exit 1;
     [ ! -f "${IN}_ss.dbtype" ] && echo "${IN}_ss.dbtype not found!" && exit 1;
-    [ ! -f "${IN}_ca.dbtype" ] && echo "${IN}_ca.dbtype not found!" && exit 1;
 fi
 
 if [ -n "${USE_FOLDSEEK}" ]; then 
@@ -74,8 +73,6 @@ if [ -n "${REMOVE_TMP}" ]; then
     "$MMSEQS" rmdb "${TMP_PATH}/db_clu_2" ${VERBOSITY}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/db_clu_2_ss" ${VERBOSITY}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/db_clu_2_ca" ${VERBOSITY}
     # shellcheck disable=SC2086
     "$MMSEQS" rmdb "${TMP_PATH}/db_clu_2_profile" ${VERBOSITY}
     rm -rf "${TMP_PATH}/cluster"
