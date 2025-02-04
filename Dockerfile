@@ -15,7 +15,7 @@ ONBUILD ADD https://mmseqs.com/archive/${FOLDSEEK_COMMIT}/foldseek-linux-arm64.t
 
 FROM $downloader AS downloader
 
-FROM --platform=$BUILDPLATFORM debian:stable-backports as builder
+FROM --platform=$BUILDPLATFORM debian:stable-backports AS builder
 ARG TARGETARCH
 ARG APP
 ARG FOLDSEEK_COMMIT
