@@ -39,6 +39,7 @@ void setClusterSearchWorkflowDefaults(LocalParameters *p) {
 int clustersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     setClusterSearchWorkflowDefaults(&par);
+    par.foldseekPath = FileUtil::dirName(*(argv - 2)) + "/foldseek";
 
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);
@@ -86,8 +87,24 @@ int clustersearch(int argc, const char **argv, const Command &command) {
     if (par.removeTmpFiles) {
         cmd.addVariable("REMOVE_TMP", "TRUE");
     }
+
+    bool useFoldseek = false;
+    if (par.clusterSearchMode == 1) {
+        useFoldseek = true;
+        struct stat st;
+        if (stat(par.foldseekPath.c_str(), &st) != 0) {
+            Debug(Debug::ERROR) << "Cannot find foldseek binary " << par.foldseekPath << ".\n";
+            EXIT(EXIT_FAILURE);
+        }
+        bool isExecutable = (st.st_mode & S_IXUSR) || (st.st_mode & S_IXGRP) || (st.st_mode & S_IXOTH);
+        if (isExecutable == false) {
+            Debug(Debug::ERROR) << "Cannot execute foldseek binary " << par.foldseekPath << ".\n";
+            EXIT(EXIT_FAILURE);
+        }
+    }
     cmd.addVariable("USE_PROFILE", par.profileClusterSearch == 1 ? "TRUE" : NULL);
-    cmd.addVariable("USE_FOLDSEEK", par.clusterSearchMode == 1 ? "TRUE" : NULL);
+    cmd.addVariable("FOLDSEEK", par.foldseekPath.c_str());
+    cmd.addVariable("USE_FOLDSEEK", useFoldseek ? "TRUE" : NULL);
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clusterworkflow).c_str());
     if(par.numIterations <= 1){
         std::vector<MMseqsParameter*> searchwithoutnumiter;

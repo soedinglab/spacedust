@@ -15,6 +15,7 @@ void setclusterDbDefaults(LocalParameters *p) {
 int clusterdb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     setclusterDbDefaults(&par);
+    par.foldseekPath = FileUtil::dirName(*(argv - 2)) + "/foldseek";
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     if (FileUtil::directoryExists(par.db2.c_str()) == false) {
@@ -42,7 +43,23 @@ int clusterdb(int argc, const char **argv, const Command &command) {
     if (par.removeTmpFiles) {
         cmd.addVariable("REMOVE_TMP", "TRUE");
     }
-    cmd.addVariable("USE_FOLDSEEK", par.clusterSearchMode == 1 ? "TRUE" : NULL);
+
+    bool useFoldseek = false;
+    if (par.clusterSearchMode == 1) {
+        useFoldseek = true;
+        struct stat st;
+        if (stat(par.foldseekPath.c_str(), &st) != 0) {
+            Debug(Debug::ERROR) << "Cannot find foldseek binary " << par.foldseekPath << ".\n";
+            EXIT(EXIT_FAILURE);
+        }
+        bool isExecutable = (st.st_mode & S_IXUSR) || (st.st_mode & S_IXGRP) || (st.st_mode & S_IXOTH);
+        if (isExecutable == false) {
+            Debug(Debug::ERROR) << "Cannot execute foldseek binary " << par.foldseekPath << ".\n";
+            EXIT(EXIT_FAILURE);
+        }
+    }
+    cmd.addVariable("FOLDSEEK", par.foldseekPath.c_str());
+    cmd.addVariable("USE_FOLDSEEK", useFoldseek ? "TRUE" : NULL);
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clusterworkflow).c_str());
     cmd.addVariable("CONSENSUS_PAR", par.createParameterString(par.profile2seq).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());

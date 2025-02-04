@@ -40,6 +40,7 @@ public:
     PARAMETER(PARAM_FILE_INCLUDE)
     PARAMETER(PARAM_FILE_EXCLUDE)
     PARAMETER(PARAM_GFF_DIR)
+    PARAMETER(PARAM_FOLDSEEK_PATH)
 
     int clusterSearchMode;
     float pMHThr;
@@ -53,6 +54,7 @@ public:
     int suboptHitsFactor;
     std::string fileInclude;
     std::string fileExclude;
+    std::string foldseekPath;
 
 private:
     LocalParameters() : 
@@ -68,7 +70,8 @@ private:
         PARAM_PROFILE_CLUSTER_SEARCH(PARAM_PROFILE_CLUSTER_SEARCH_ID, "--profile-cluster-search", "Cluster search against profiles", "Perform profile(target)-sequence searches in clustersearch", typeid(bool), (void *) &profileClusterSearch, ""),
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
-        PARAM_GFF_DIR(PARAM_GFF_DIR_ID, "--gff-dir", "gff dir file", "Path to gff dir file", typeid(std::string), (void *) &gffDir, "")
+        PARAM_GFF_DIR(PARAM_GFF_DIR_ID, "--gff-dir", "gff dir file", "Path to gff dir file", typeid(std::string), (void *) &gffDir, ""),
+        PARAM_FOLDSEEK_PATH(PARAM_FOLDSEEK_PATH_ID, "--foldseek-path", "Path to Foldseek", "Path to Foldseek binary", typeid(std::string), (void *) &foldseekPath, "")
     {
 
         // clusterhits
@@ -132,6 +135,7 @@ private:
         clustersearchworkflow = combineList(clustersearchworkflow, clusterhits);
         clustersearchworkflow.push_back(&PARAM_PROFILE_CLUSTER_SEARCH);
         clustersearchworkflow.push_back(&PARAM_CLUSTERSEARCH_MODE);
+        clustersearchworkflow.push_back(&PARAM_FOLDSEEK_PATH);
 
         //aa2foldseek
         aa2foldseek = combineList(prefilter, align);
@@ -141,6 +145,7 @@ private:
         //clusterdb
         clusterdb = combineList(clusterworkflow, profile2seq);
         clusterdb.push_back(&PARAM_CLUSTERSEARCH_MODE);
+        clusterdb.push_back(&PARAM_FOLDSEEK_PATH);
 
         clusterSearchMode = 0;
         suboptHitsFactor = 0;
@@ -154,6 +159,7 @@ private:
         fileInclude = ".*";
         fileExclude = "^$";
         gffDir = "";
+        foldseekPath = "foldseek";
 
         //TODO: add citations (foldseek & mmseqs & clustersearch)
         citations.emplace(CITATION_SPACEDUST, "");

@@ -21,7 +21,6 @@ QUERY="$1"
 TARGET="$2"
 OUTPUT="$3"
 TMP_PATH="$4"
-FOLDSEEK="$(pwd)"/foldseek/bin/foldseek
 
 if [ -n "${USE_FOLDSEEK}" ]; then 
     [ -n "${USE_PROFILE}" ] && [ ! -f "${TARGET}_foldseek_clu_seq.dbtype" ] && echo "${TARGET}_foldseek_clu_seq.dbtype not found! Please make sure the ${TARGET}_foldseek is clustered with clusterdb ${TARGET}_foldseek tmp --search-mode 1" && exit 1;

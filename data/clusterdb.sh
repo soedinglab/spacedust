@@ -9,7 +9,6 @@ notExists() {
 
 IN="$1"
 TMP_PATH="$2"
-FOLDSEEK="$(pwd)"/foldseek/bin/foldseek
 
 [ ! -f "${IN}.dbtype" ] && echo "${IN}.dbtype not found!" && exit 1;
 if [ -n "${USE_FOLDSEEK}" ]; then 
