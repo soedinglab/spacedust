@@ -3,6 +3,11 @@
 [ -z "$MMSEQS" ] && echo "Please set the environment variable \$MMSEQS to your MMSEQS binary." && exit 1;
 [ "$#" -ne 2 ] && echo "Please provide <inputDB> <tmpDir>" && exit 1
 
+fail() {
+    echo "Error: $1"
+    exit 1
+}
+
 notExists() {
 	[ ! -f "$1" ]
 }
@@ -24,10 +29,69 @@ if [ -n "${USE_FOLDSEEK}" ]; then
             || fail "foldseek cluster failed"
     fi
 
+    if notExists "${IN}_clu_seq.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" cpdb "${IN}" "${IN}_clu_seq" ${VERBOSITY}
+    fi
+
+    if notExists "${IN}_clu_seq_h.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" cpdb "${IN}_h" "${IN}_clu_seq_h" ${VERBOSITY}
+    fi
+
+    if notExists "${IN}_clu_seq_ss.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" cpdb "${IN}_ss" "${IN}_clu_seq_ss" ${VERBOSITY}
+    fi
+
+    if [ -f "${IN}_ca.dbtype" ] && notExists "${IN}_clu_seq_ca.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" cpdb "${IN}_ca" "${IN}_clu_seq_ca" ${VERBOSITY}
+    fi
+
+    if notExists "${IN}_clu_clu.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" cpdb ${TMP_PATH}/cluster_foldseek "${IN}_clu_clu" ${VERBOSITY}
+    fi
+
+    if [ -f "${IN}_clu_seq_ca.dbtype" ] && notExists "${IN}_clu_ca.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" createsubdb ${TMP_PATH}/cluster_foldseek "${IN}_clu_seq_ca" "${IN}_clu_ca" ${VERBOSITY}
+    fi
+
+    if notExists "${IN}_clu_aln.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" structurealign  "${IN}_clu_seq" "${IN}_clu_seq" "${TMP_PATH}/cluster_foldseek" "${IN}_clu_aln" -a -e 0.1 --sort-by-structure-bits 0 ${MERGECLU_PAR}
+    fi
+
+    if notExists "${IN}_clu_profile.dbtype"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" result2profile  "${IN}_clu_seq" "${IN}_clu_seq" "${IN}_clu_aln" "${IN}_clu_profile" ${PROFILE_PAR}
+    fi
+
     if notExists "${IN}_clu.dbtype"; then
         # shellcheck disable=SC2086
-        "${FOLDSEEK}" createclusearchdb "${IN}" "${TMP_PATH}/cluster_foldseek" "${IN}_clu" ${THREADS_PAR} \
-            || fail "foldseek createclusearchdb failed"
+        "${FOLDSEEK}" profile2consensus "${IN}_clu_profile" "${IN}_clu" ${MERGECLU_PAR}
+        if [ -n "$REMOVE_TMP" ]; then
+            # shellcheck disable=SC2086
+            "${FOLDSEEK}" rmdb "${IN}_clu_profile" ${VERBOSITY}
+        fi
+    fi
+
+    if notExists "${IN}_clu_profile_ss.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" result2profile  "${IN}_clu_seq_ss" "${IN}_clu_seq_ss" "${IN}_clu_aln" "${IN}_clu_profile_ss" ${PROFILE_SS_PAR}
+    fi
+
+    if notExists "${IN}_clu_ss.dbtype"; then
+        # shellcheck disable=SC2086
+        "${FOLDSEEK}" profile2consensus "${IN}_clu_profile_ss" "${IN}_clu_ss" ${MERGECLU_PAR}
+        if [ -n "$REMOVE_TMP" ]; then
+            # shellcheck disable=SC2086
+            "${FOLDSEEK}" rmdb "${IN}_clu_profile_ss" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "${FOLDSEEK}" rmdb "${IN}_clu_aln" ${VERBOSITY}
+        fi
     fi
 else
     if notExists "${TMP_PATH}/cluster_mmseqs.dbtype"; then

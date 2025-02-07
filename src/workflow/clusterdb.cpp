@@ -62,9 +62,27 @@ int clusterdb(int argc, const char **argv, const Command &command) {
     cmd.addVariable("USE_FOLDSEEK", useFoldseek ? "TRUE" : NULL);
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clusterworkflow).c_str());
     cmd.addVariable("CONSENSUS_PAR", par.createParameterString(par.profile2seq).c_str());
+    cmd.addVariable("PROFILE_PAR", par.createParameterString(par.result2profile).c_str());
     cmd.addVariable("THREADS_PAR", par.createParameterString(par.onlythreads).c_str());
     cmd.addVariable("VERBOSITY", par.createParameterString(par.onlyverbosity).c_str());
     cmd.addVariable("MERGECLU_PAR", par.createParameterString(par.threadsandcompression).c_str());
+    par.pca = 1.4;
+    par.pcb = 1.5;
+    par.scoringMatrixFile = "3di.out";
+    par.seedScoringMatrixFile = "3di.out";
+    par.maskProfile = 0;
+    par.compBiasCorrection = 0;
+    if(par.PARAM_E_PROFILE.wasSet == false){
+        par.evalProfile = 0.1;
+        par.evalThr = 0.1;
+    }
+    std::vector<MMseqsParameter*> result2profile_ss;
+    for (size_t i = 0; i < par.result2profile.size(); i++) {
+        if (par.result2profile[i]->uniqid != par.PARAM_GAP_PSEUDOCOUNT.uniqid) {
+            result2profile_ss.push_back(par.result2profile[i]);
+        }
+    }
+    cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(result2profile_ss).c_str());
 
     FileUtil::writeFile(tmpDir + "/clusterdb.sh", clusterdb_sh, clusterdb_sh_len);
     std::string program(tmpDir + "/clusterdb.sh");
