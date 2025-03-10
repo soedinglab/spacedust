@@ -47,12 +47,35 @@ export MMSEQS_FORCE_MERGE=1
 
 OUTDB="$(abspath "${OUTDB}")"
 
-if notExists "${TMP_PATH}/seqDB"; then
+#check if already created db
+if notExists "${1}.dbtype"; then
     # shellcheck disable=SC2086
     "${MMSEQS}" createdb "$@" "${TMP_PATH}/seqDB" ${CREATEDB_PAR} \
         || fail "createdb failed"
-fi
+        
+else
+    echo "Input DB already exists. Generating associated metadata."
 
+	if notExists "${TMP_PATH}/seqDB.index"; then
+	    # shellcheck disable=SC2086
+	    "${MMSEQS}" cpdb "$1" "${TMP_PATH}/seqDB" ${VERBOSITY} \
+		|| fail "cpdb failed"
+	fi
+
+	if notExists "${TMP_PATH}/seqDB_h.index"; then
+	    # shellcheck disable=SC2086
+	    "${MMSEQS}" cpdb "$1_h" "${TMP_PATH}/seqDB_h" ${VERBOSITY} \
+		|| fail "cpdb failed"
+	fi
+
+	if notExists "${OUTDB}_ss.index"; then
+	    # shellcheck disable=SC2086
+	    "${MMSEQS}" cpdb "$1_ss" "${OUTDB}_ss" ${VERBOSITY} \
+		|| fail "cpdb failed"
+	fi
+
+    touch "${TMP_PATH}/seqDB.external"
+fi
 
 if [ "$("${MMSEQS}" dbtype "${TMP_PATH}/seqDB")" = "Nucleotide" ]; then
 
@@ -99,10 +122,18 @@ elif [ "$("${MMSEQS}" dbtype "${TMP_PATH}/seqDB")" = "Aminoacid" ]; then
         |awk -F '[\t#]' 'NF{NF-=1};1' OFS='\t' \
         |awk -F'\t' '$5=="-1" { temp = $4; $4 = $3; $3 = temp } 1' OFS='\t' \
         |sort -k1,1n > "${TMP_PATH}/seqDB_h_pref.tmp"
-
-        join -t "$(printf '\t')" -o '1.1 2.2 2.3 2.4 1.3' "${TMP_PATH}/seqDB.lookup" "${TMP_PATH}/seqDB_h_pref.tmp" \
-        |awk -F '[\t]' '{ if (setid == $NF) { counter++ } else { counter = 1; setid = $NF }; print $1"\t"$2"_"counter-1"_"$3"_"$4"\t"$NF }' \
-        > "${TMP_PATH}/seqDB.lookup.tmp"
+    
+        if notExists "${TMP_PATH}/seqDB.external"; then
+            join -t "$(printf '\t')" -o '1.1 2.2 2.3 2.4 1.3' "${TMP_PATH}/seqDB.lookup" "${TMP_PATH}/seqDB_h_pref.tmp" \
+            |awk -F '[\t]' '{ if (setid == $NF) { counter++ } else { counter = 1; setid = $NF }; print $1"\t"$2"_"counter-1"_"$3"_"$4"\t"$NF }' \
+            > "${TMP_PATH}/seqDB.lookup.tmp"
+        else
+            join -t "$(printf '\t')" -o '1.1 2.2 2.3 2.4 1.3' "${TMP_PATH}/seqDB.lookup" "${TMP_PATH}/seqDB_h_pref.tmp" \
+            |sort -k2,2 -V\
+            |awk -F '[\t]' '{ if (setid == $NF) { counter++ } else { counter = 1; setid = $NF }; print $1"\t"$2"_"counter-1"_"$3"_"$4"\t"$NF }' \
+            |sort -k1,1n\
+            > "${TMP_PATH}/seqDB.lookup.tmp"
+        fi
     fi
     
     mv -f -- "${TMP_PATH}/seqDB.lookup.tmp" "${TMP_PATH}/seqDB.lookup"
@@ -147,6 +178,8 @@ if notExists "${OUTDB}_set_size.index"; then
     "${MMSEQS}" result2stats "${OUTDB}" "${OUTDB}" "${OUTDB}_set_to_member" "${OUTDB}_set_size" ${RESULT2STATS_PAR} \
         || fail "result2stats failed"
 fi
+
+#add check for lookup format
 
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
