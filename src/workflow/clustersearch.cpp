@@ -89,7 +89,7 @@ int clustersearch(int argc, const char **argv, const Command &command) {
     }
 
     bool useFoldseek = false;
-    if (par.clusterSearchMode == 1) {
+    if (par.clusterSearchMode >= 1) {
         useFoldseek = true;
         struct stat st;
         if (stat(par.foldseekPath.c_str(), &st) != 0) {
@@ -103,6 +103,7 @@ int clustersearch(int argc, const char **argv, const Command &command) {
         }
     }
     cmd.addVariable("USE_PROFILE", par.profileClusterSearch == 1 ? "TRUE" : NULL);
+    cmd.addVariable("USE_PROSTT5", par.clusterSearchMode == 2 ? "TRUE" : NULL);
     cmd.addVariable("FOLDSEEK", par.foldseekPath.c_str());
     cmd.addVariable("USE_FOLDSEEK", useFoldseek ? "TRUE" : NULL);
     cmd.addVariable("CLUSTER_PAR", par.createParameterString(par.clusterworkflow).c_str());

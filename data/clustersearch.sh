@@ -22,38 +22,48 @@ TARGET="$2"
 OUTPUT="$3"
 TMP_PATH="$4"
 
-if [ -n "${USE_FOLDSEEK}" ]; then 
+if [ -n "${USE_PROSTT5}" ]; then 
+    [ -n "${USE_PROFILE}" ] && [ ! -f "${TARGET}_clu_seq.dbtype" ] && echo "${TARGET}_foldseek_clu_seq.dbtype not found! Please make sure the ${TARGET} is clustered with clusterdb ${TARGET} tmp --search-mode 1" && exit 1;
+    [ ! -f "${TARGET}_ss.dbtype" ] && echo "${TARGET}_ss.dbtype not found! Please make sure the ${TARGET} is created using ProstT5. " && exit 1;
+elif [ -n "${USE_FOLDSEEK}" ]; then 
     [ -n "${USE_PROFILE}" ] && [ ! -f "${TARGET}_foldseek_clu_seq.dbtype" ] && echo "${TARGET}_foldseek_clu_seq.dbtype not found! Please make sure the ${TARGET}_foldseek is clustered with clusterdb ${TARGET}_foldseek tmp --search-mode 1" && exit 1;
-    [ ! -f "$FOLDSEEK" ] && echo "Please make sure Foldseek is installed in the working directory." && exit 1;
-    [ ! -f "${TARGET}_foldseek.dbtype" ] && echo "${TARGET}_foldseek.dbtype not found! Please make sure the ${TARGET}_foldseek is created with aa2foldseek" && exit 1;
+    [ ! -f "${TARGET}_foldseek.dbtype" ] && echo "${TARGET}_foldseek.dbtype not found! Please make sure the ${TARGET}_foldseek is created with aa2foldseek. If ${TARGET} is created with ProstT5 please use --search-mode 2" && exit 1;
 fi
 
 if [ -n "${USE_PROFILE}" ]; then
     if [ -n "${USE_FOLDSEEK}" ]; then
-        if notExists "${TMP_PATH}/result_foldseek.index"; then
-            # shellcheck disable=SC2086
-            "${FOLDSEEK}" search "${QUERY}_foldseek" "${TARGET}_foldseek_clu" "${TMP_PATH}/result_foldseek" "${TMP_PATH}/search" --cluster-search 1 ${FOLDSEEKSEARCH_PAR}\
-                || fail "foldseek search failed"
-        fi
-        if notExists "${TMP_PATH}/result_clu.index"; then
-            # shellcheck disable=SC2086
-            "${MMSEQS}" search "${QUERY}_unmapped" "${TARGET}_clu" "${TMP_PATH}/result_clu" "${TMP_PATH}/search" ${SEARCH_PAR} \
-                || fail "mmseqs search failed"
-        fi
-        if notExists "${TMP_PATH}/result_exp.index"; then
-            # shellcheck disable=SC2086
-            "${MMSEQS}" expandaln "${QUERY}_unmapped" "${TARGET}_clu" "${TMP_PATH}/result_clu" "${TARGET}_clu_aln" "${TMP_PATH}/result_exp" ${THREADS_PAR} \
-                || fail "expandaln failed"
-        fi
-        if notExists "${TMP_PATH}/result_mmseqs.index"; then
-            # shellcheck disable=SC2086
-            "${MMSEQS}" align "${QUERY}_unmapped" "${TARGET}" "${TMP_PATH}/result_exp" "${TMP_PATH}/result_mmseqs" -a --alt-ali 10 ${THREADS_PAR} \
-                || fail "realign failed"
-        fi
-        if notExists "${TMP_PATH}/result.index"; then
-            # shellcheck disable=SC2086
-            "${MMSEQS}" concatdbs "${TMP_PATH}/result_foldseek" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/result" --preserve-keys ${THREADS_PAR} \
-                || fail "concatdbs failed"
+        if [ -n "${USE_PROSTT5}" ] ; then
+            if notExists "${TMP_PATH}/result.index"; then
+                # shellcheck disable=SC2086
+                "${FOLDSEEK}" search "${QUERY}" "${TARGET}_clu" "${TMP_PATH}/result" "${TMP_PATH}/search" --cluster-search 1 ${FOLDSEEKSEARCH_PAR}\
+                    || fail "foldseek search failed"
+            fi
+        else
+            if notExists "${TMP_PATH}/result_foldseek.index"; then
+                # shellcheck disable=SC2086
+                "${FOLDSEEK}" search "${QUERY}_foldseek" "${TARGET}_foldseek_clu" "${TMP_PATH}/result_foldseek" "${TMP_PATH}/search" --cluster-search 1 ${FOLDSEEKSEARCH_PAR}\
+                    || fail "foldseek search failed"
+            fi
+            if notExists "${TMP_PATH}/result_clu.index"; then
+                # shellcheck disable=SC2086
+                "${MMSEQS}" search "${QUERY}_unmapped" "${TARGET}_clu" "${TMP_PATH}/result_clu" "${TMP_PATH}/search" ${SEARCH_PAR} \
+                    || fail "mmseqs search failed"
+            fi
+            if notExists "${TMP_PATH}/result_exp.index"; then
+                # shellcheck disable=SC2086
+                "${MMSEQS}" expandaln "${QUERY}_unmapped" "${TARGET}_clu" "${TMP_PATH}/result_clu" "${TARGET}_clu_aln" "${TMP_PATH}/result_exp" ${THREADS_PAR} \
+                    || fail "expandaln failed"
+            fi
+            if notExists "${TMP_PATH}/result_mmseqs.index"; then
+                # shellcheck disable=SC2086
+                "${MMSEQS}" align "${QUERY}_unmapped" "${TARGET}" "${TMP_PATH}/result_exp" "${TMP_PATH}/result_mmseqs" -a --alt-ali 10 ${THREADS_PAR} \
+                    || fail "realign failed"
+            fi
+            if notExists "${TMP_PATH}/result.index"; then
+                # shellcheck disable=SC2086
+                "${MMSEQS}" concatdbs "${TMP_PATH}/result_foldseek" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/result" --preserve-keys ${THREADS_PAR} \
+                    || fail "concatdbs failed"
+            fi
         fi
     else
         if notExists "${TMP_PATH}/result_clu.index"; then
@@ -73,25 +83,35 @@ if [ -n "${USE_PROFILE}" ]; then
 else
     if notExists "${TMP_PATH}/result.index"; then
         if [ -n "${USE_FOLDSEEK}" ]; then
-            if notExists "${TMP_PATH}/result_foldseek.index"; then
-                # shellcheck disable=SC2086
-                "${FOLDSEEK}" search "${QUERY}_foldseek" "${TARGET}_foldseek" "${TMP_PATH}/result_foldseek" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
-                    || fail "foldseek search failed"
-            fi
-            if notExists "${TMP_PATH}/result_mmseqs.index"; then
-                # shellcheck disable=SC2086
-                "${MMSEQS}" search "${QUERY}_unmapped" "${TARGET}" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/search" ${SEARCH_PAR} \
-                    || fail "mmseqs search failed"
-            fi
-            if notExists "${TMP_PATH}/result.index"; then
-                # shellcheck disable=SC2086
-                "${MMSEQS}" concatdbs "${TMP_PATH}/result_foldseek" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/result" --preserve-keys ${THREADS_PAR} \
-                    || fail "concatdbs failed"
+            if [ -n "${USE_PROSTT5}" ] ; then
+                if notExists "${TMP_PATH}/result.index"; then
+                    # shellcheck disable=SC2086
+                    "${FOLDSEEK}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
+                        || fail "foldseek search failed"
+                fi
+            else
+                if notExists "${TMP_PATH}/result_foldseek.index"; then
+                    # shellcheck disable=SC2086
+                    "${FOLDSEEK}" search "${QUERY}_foldseek" "${TARGET}_foldseek" "${TMP_PATH}/result_foldseek" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
+                        || fail "foldseek search failed"
+                fi
+                if notExists "${TMP_PATH}/result_mmseqs.index"; then
+                    # shellcheck disable=SC2086
+                    "${MMSEQS}" search "${QUERY}_unmapped" "${TARGET}" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/search" ${SEARCH_PAR} \
+                        || fail "mmseqs search failed"
+                fi
+                if notExists "${TMP_PATH}/result.index"; then
+                    # shellcheck disable=SC2086
+                    "${MMSEQS}" concatdbs "${TMP_PATH}/result_foldseek" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/result" --preserve-keys ${THREADS_PAR} \
+                        || fail "concatdbs failed"
+                fi
             fi
         else
+            if notExists "${TMP_PATH}/result.index"; then
             # shellcheck disable=SC2086
             "${MMSEQS}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${SEARCH_PAR} \
                 || fail "mmseqs search failed"
+            fi
         fi
     fi
 fi

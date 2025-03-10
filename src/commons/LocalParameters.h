@@ -59,7 +59,7 @@ public:
 private:
     LocalParameters() : 
         Parameters(),
-        PARAM_CLUSTERSEARCH_MODE(PARAM_CLUSTERSEARCH_MODE_ID, "--search-mode", "Cluster Search Mode", "0: sequence search with MMseqs2, 1: structure comparison with Foldseek", typeid(int), (void *) &clusterSearchMode, "^[0-1]{1}"),
+        PARAM_CLUSTERSEARCH_MODE(PARAM_CLUSTERSEARCH_MODE_ID, "--search-mode", "Cluster Search Mode", "0: sequence search with MMseqs2, 1: structure comparison with Foldseek, 2: Foldseek + ProstT5", typeid(int), (void *) &clusterSearchMode, "^[0-2]{1}"),
         PARAM_SUBOPTIMAL_HITS(PARAM_SUBOPTIMAL_HITS_ID, "--suboptimal-hits", "Include sub-optimal hits with factor", "Include sub-optimal hits of query sequence up to a factor of its E-value. 0: only include one best hit", typeid(int), (void *) &suboptHitsFactor, "^(0|[1-9]{1}[0-9]*)$"),
         PARAM_FILTER_SELF_MATCH(PARAM_FILTER_SELF_MATCH_ID, "--filter-self-match", "Filter self match", "Remove hits between the same set. 0: do not filter, 1: filter", typeid(bool), (void *) &filterSelfMatch, ""),
         PARAM_MULTIHIT_PVAL(PARAM_MULTIHIT_PVAL_ID, "--multihit-pval", "Multihit P-value cutoff", "Multihit P-value threshold for cluster match output", typeid(float), (void *) &pMHThr, "^0(\\.[0-9]+)?|^1(\\.0+)?$"),
