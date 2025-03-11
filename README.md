@@ -27,7 +27,7 @@ Input genomes are supplied as separate FASTA and GFF3 files (one genome per file
 
 ## Dependencies
 
-To enable structure comparisons, spacedust requires the installation of [Foldseek](https://github.com/steineggerlab/foldseek) in the working directory.
+To enable structure comparison, Spacedust requires the installation of [Foldseek](https://github.com/steineggerlab/foldseek).
  <!-- (the binary file `/spacedust/build/bin/foldseek` should exist in the working directory). -->
 
 ## Running Spacedust
@@ -46,14 +46,15 @@ To enable structure comparisons, spacedust requires the installation of [Foldsee
     --gff-dir                              Path to gff dir file
 
     # clustersearch
-    --search-mode                          0: sequence search with MMseqs2, 1: structure comparison with Foldseek (default:0)
+    --search-mode                          0: sequence search with MMseqs2, 1: structure comparison with Foldseek, 2: Foldseek + ProstT5 (default:0)
     --num-iterations                       Number of iterative profile search iterations (default:1)
     --profile-cluster-search               Perform profile(target)-sequence searches
     --filter-self-match                    Remove hits between the same set
     --max-gene-gap                         Maximum number of genes allowed between two clusters to merge (default:3)
     --cluster-size                         Minimum number of genes to define cluster (default:2)
+    --foldseek-path                        Path to Foldseek binary
 
-### Quick start
+<!--### Quick start -->
 <!-- The `easy-clustersearch` workflow combines the clustersearch modules into a single step: createsetdb, aa2foldseek and (iterative)clustersearch.
 
     spacedust easy-clustersearch examples/*.fna targetSetDB clusterResult tmpFolder --gff-dir gffDir.txt --gff-type CDS
@@ -66,6 +67,8 @@ To start, you need to create a database of the input genomes `setDB`. Before sea
     spacedust createsetdb genome1.fna [...genomeN.fna] setDB tmpFolder --gff-dir gffDir.txt --gff-type CDS
     spacedust createsetdb genome1.faa [...genomeN.faa] setDB tmpFolder
 
+### Creating structure database by mapping to a reference structure DB
+
 To enable protein structure search with Foldseek, the protein sequences are mapped to Foldseek structure sequence DB like AlphaFoldDB. This requires pre-downloading the reference FoldseekDB.
 
     # Download reference FoldseekDB
@@ -73,6 +76,20 @@ To enable protein structure search with Foldseek, the protein sequences are mapp
 
     # Convert to structure sequence DB
     spacedust aa2foldseek setDB refFoldseekDB tmpFolder
+
+
+### Creating structure database using ProstT5
+
+You can predict the 3Di structural sequence from protein sequence FASTA files using the [ProstT5](https://academic.oup.com/nargab/article/6/4/lqae150/7901286) protein language model, to enable the full Foldseek search. 
+
+    # Download the ProstT5 protein language model
+    path/to/foldseek databases ProstT5 weights tmpFolder
+
+    # Create the Foldseek DB and Spacedust setDB
+    path/to/foldseek createdb genome1.faa [...genomeN.faa] DB --prostt5-model weights
+    spacedust createsetdb DB setDB tmpFolder
+
+It runs by default on CPU, but Foldseek supports accelerating the inference using GPU(s) (`--gpu 1`) with the installation of the [Foldseek GPU build binary](https://github.com/steineggerlab/foldseek#installation). For the details, please refer to the instructions in the [Foldseek repository](https://github.com/steineggerlab/foldseek?tab=readme-ov-file#create-custom-database-from-protein-sequence-fasta).
 
 ### Spacedust (with MMseqs2 and/or Foldseek)
 
@@ -89,6 +106,9 @@ Spacedust will first conduct an all-against-all homology search/structure compar
 
     # Search querySetDB against targetSetDB (using Foldseek and MMseqs)
     spacedust clustersearch querySetDB targetSetDB result.tsv tmpFolder --search-mode 1
+
+    # Search querySetDB against targetSetDB (using ProstT5 and Foldseek only)
+    spacedust clustersearch querySetDB targetSetDB result.tsv tmpFolder --search-mode 2
 
 ### The Spacedust output
 
