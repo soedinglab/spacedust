@@ -70,6 +70,13 @@ jobs:
           make -j $(nproc --all)
         displayName: Build Spacedust
       - script: |
+          wget https://mmseqs.com/foldseek/foldseek-linux-avx2.tar.gz
+          tar xvzf foldseek-linux-avx2.tar.gz
+          rm -f foldseek-linux-avx2.tar.gz
+          mv -f foldseek/bin/foldseek build/src
+          rm -rf foldseek
+        displayName: Install Foldseek
+      - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./util/run_regression.sh ./build/src/spacedust examples EVAL
         displayName: Run Regression Suite
@@ -140,6 +147,13 @@ jobs:
           cd ${BUILD_SOURCESDIRECTORY}
           ./lib/mmseqs/util/build_osx.sh . build spacedust
         displayName: Build Spacedust
+      - script: |
+          wget https://mmseqs.com/foldseek/foldseek-osx-universal.tar.gz
+          tar xvzf foldseek-osx-universal.tar.gz
+          rm -f foldseek-osx-universal.tar.gz
+          mv -f foldseek/bin/foldseek build
+          rm -rf foldseek
+        displayName: Install Foldseek
       - script: |
           cd ${BUILD_SOURCESDIRECTORY}
           ./util/run_regression.sh ./build/spacedust examples EVAL
