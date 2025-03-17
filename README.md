@@ -27,8 +27,10 @@ Input genomes are supplied as separate FASTA and GFF3 files (one genome per file
 
 ## Dependencies
 
-To enable structure comparison, Spacedust requires the installation of [Foldseek](https://github.com/steineggerlab/foldseek).
- <!-- (the binary file `/spacedust/build/bin/foldseek` should exist in the working directory). -->
+Spacedust requires [Foldseek](https://github.com/steineggerlab/foldseek) to enable structure comparison. You can either: 
+
+1. Place the Foldseek binary in the same directory as the Spacedust binary (i.e., `/spacedust/bin/foldseek` should exist in the working directory), or
+2. Use the `--foldseek-path` parameter to specify a different location for the Foldseek binary.
 
 ## Running Spacedust
 
