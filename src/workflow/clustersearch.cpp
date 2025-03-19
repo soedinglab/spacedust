@@ -39,7 +39,6 @@ void setClusterSearchWorkflowDefaults(LocalParameters *p) {
 int clustersearch(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     setClusterSearchWorkflowDefaults(&par);
-    par.foldseekPath = FileUtil::dirName(*(argv - 2)) + "/foldseek";
 
     par.PARAM_MAX_REJECTED.addCategory(MMseqsParameter::COMMAND_EXPERT);
     par.PARAM_DB_OUTPUT.addCategory(MMseqsParameter::COMMAND_EXPERT);

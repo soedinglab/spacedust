@@ -15,7 +15,6 @@ void setclusterDbDefaults(LocalParameters *p) {
 int clusterdb(int argc, const char **argv, const Command &command) {
     LocalParameters &par = LocalParameters::getLocalInstance();
     setclusterDbDefaults(&par);
-    par.foldseekPath = FileUtil::dirName(*(argv - 2)) + "/foldseek";
     par.parseParameters(argc, argv, command, true, 0, 0);
 
     if (FileUtil::directoryExists(par.db2.c_str()) == false) {

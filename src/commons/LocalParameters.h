@@ -1,7 +1,8 @@
 #ifndef LOCALPARAMETERS_H
 #define LOCALPARAMETERS_H
  
-#include <Parameters.h>
+#include "Parameters.h"
+#include "FileUtil.h"
 
 const int CITATION_SPACEDUST = CITATION_END;
 
@@ -56,6 +57,7 @@ public:
     std::string fileExclude;
     std::string foldseekPath;
 
+    static std::string getAbsExePath();
 private:
     LocalParameters() : 
         Parameters(),
@@ -159,7 +161,8 @@ private:
         fileInclude = ".*";
         fileExclude = "^$";
         gffDir = "";
-        foldseekPath = "foldseek";
+        std::string binaryDir = FileUtil::dirName(getAbsExePath());
+        foldseekPath =  binaryDir.empty() ? "foldseek" : binaryDir + "/foldseek";
 
         //TODO: add citations (foldseek & mmseqs & clustersearch)
         citations.emplace(CITATION_SPACEDUST, "");
