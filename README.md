@@ -16,6 +16,8 @@ Spacedust can be used by downloading a [statically compiled version](https://mms
     wget https://mmseqs.com/spacedust/spacedust-linux-sse41.tar.gz; tar xvzf spacedust-linux-sse41.tar.gz; export PATH=$(pwd)/spacedust/bin/:$PATH
     # static macOS build (universal binary with SSE4.1/AVX2/M1 NEON)
     wget https://mmseqs.com/spacedust/spacedust-osx-universal.tar.gz; tar xvzf spacedust-osx-universal.tar.gz; export PATH=$(pwd)/spacedust/bin/:$PATH
+    # Conda installer (Linux and macOS)
+    conda install -c conda-forge -c bioconda spacedust
 
 Other precompiled binaries for ARM64, PPC64LE amd SSE2 are available at [https://mmseqs.com/spacedust](https://mmseqs.com/spacedust).
 
