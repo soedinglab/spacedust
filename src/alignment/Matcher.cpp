@@ -4,20 +4,20 @@
 #include "Util.h"
 #include "Parameters.h"
 #include "StripedSmithWaterman.h"
+#include <fast_float/fast_float.h>
 
 
-Matcher::Matcher(int querySeqType, int targetSeqType, int maxSeqLen, BaseMatrix *m, EvalueComputation * evaluer,
+Matcher::Matcher(int querySeqType, int maxSeqLen, BaseMatrix *m, EvalueComputation * evaluer,
                  bool aaBiasCorrection, float aaBiasCorrectionScale, int gapOpen, int gapExtend, float correlationScoreWeight, int zdrop)
-                 : gapOpen(gapOpen), gapExtend(gapExtend), correlationScoreWeight(correlationScoreWeight), m(m), evaluer(evaluer), tinySubMat(NULL)  {
-    setSubstitutionMatrix(m);
-
+                 : gapOpen(gapOpen), gapExtend(gapExtend), correlationScoreWeight(correlationScoreWeight), m(m), evaluer(evaluer), tinySubMat(NULL) {
     if (Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_NUCLEOTIDES)) {
         nuclaligner = new BandedNucleotideAligner(m, maxSeqLen, gapOpen, gapExtend, zdrop);
         aligner = NULL;
     } else {
         nuclaligner = NULL;
         aligner = new SmithWaterman(maxSeqLen, m->alphabetSize, aaBiasCorrection,
-                                    aaBiasCorrectionScale, targetSeqType);
+                                    aaBiasCorrectionScale, (SubstitutionMatrix*) m);
+        setSubstitutionMatrix(m);
     }
     //std::cout << "lambda=" << lambdaLog2 << " logKLog2=" << logKLog2 << std::endl;
 }
@@ -76,10 +76,10 @@ Matcher::result_t Matcher::getSWResult(Sequence* dbSeq, const int diagonal, bool
         alignmentMode = Matcher::SCORE_COV_SEQID;
     } else {
         if (isIdentity == false) {
-            alignment = aligner->ssw_align(dbSeq->numSequence, dbSeq->numConsensusSequence,
-                                           dbSeq->getAlignmentProfile(), dbSeq->L, backtrace,
+            alignment = aligner->ssw_align(dbSeq->numSequence,
+                                           dbSeq->L, backtrace,
                                            gapOpen, gapExtend, alignmentMode, evalThr, evaluer, covMode,
-                                           covThr, correlationScoreWeight, maskLen, dbSeq->getId());
+                                           covThr, correlationScoreWeight, maskLen);
         } else {
             alignment = aligner->scoreIdentical(dbSeq->numSequence, dbSeq->L, evaluer, alignmentMode, backtrace);
         }
@@ -105,7 +105,7 @@ Matcher::result_t Matcher::getSWResult(Sequence* dbSeq, const int diagonal, bool
     // try to estimate sequence id
     if(alignmentMode == Matcher::SCORE_COV_SEQID){
         // compute sequence id
-        if(alignment.cigar){
+        if (backtrace.size() > 0) {
             // OVERWRITE alnLength with gapped value
             alnLength = backtrace.size();
         }
@@ -214,8 +214,10 @@ Matcher::result_t Matcher::parseAlignmentRecord(const char *data, bool readCompr
 
     unsigned int targetId = Util::fast_atoi<unsigned int>(key);
     int score = Util::fast_atoi<int>(entry[1]);
-    double seqId = strtod(entry[2],NULL);
-    double eval = strtod(entry[3],NULL);
+    double seqId;
+    fast_float::from_chars(entry[2], entry[3] - 1, seqId);
+    double eval;
+    fast_float::from_chars(entry[3], entry[4] - 1, eval);
 
     int qStart =  Util::fast_atoi<int>(entry[4]);
     int qEnd = Util::fast_atoi<int>(entry[5]);
@@ -252,7 +254,7 @@ Matcher::result_t Matcher::parseAlignmentRecord(const char *data, bool readCompr
                                      alnLength, qStart, qEnd, qLen, dbStart, dbEnd,
                                      dbLen, Util::fast_atoi<int>(entry[10]), Util::fast_atoi<int>(entry[11]),
                                      Util::fast_atoi<int>(entry[12]), Util::fast_atoi<int>(entry[13]), "");
-        // 13 without backtrace but qOrfStart dbOrfStart
+        // 13 with backtrace and qOrfStart dbOrfStart
         case ALN_RES_WITH_ORF_AND_BT_COL_CNT:
             if (readCompressed) {
                 return Matcher::result_t(targetId, score, qCov, dbCov, seqId, eval,
@@ -282,7 +284,7 @@ size_t Matcher::resultToBuffer(char * buff1, const result_t &result, bool addBac
     *(tmpBuff-1) = '\t';
     tmpBuff = Util::fastSeqIdToBuffer(result.seqId, tmpBuff);
     *(tmpBuff-1) = '\t';
-    tmpBuff += sprintf(tmpBuff,"%.3E",result.eval);
+    tmpBuff += snprintf(tmpBuff, 32, "%.3E", result.eval);
     tmpBuff++;
     *(tmpBuff-1) = '\t';
     tmpBuff = Itoa::i32toa_sse2(result.qStartPos, tmpBuff);

@@ -1,7 +1,6 @@
 #include "Prefiltering.h"
 #include "NucleotideMatrix.h"
 #include "ReducedMatrix.h"
-#include "ExtendedSubstitutionMatrix.h"
 #include "SubstitutionMatrixProfileStates.h"
 #include "DBWriter.h"
 #include "QueryMatcherTaxonomyHook.h"
@@ -38,10 +37,12 @@ Prefiltering::Prefiltering(const std::string &queryDB,
         maskMode(par.maskMode),
         maskLowerCaseMode(par.maskLowerCaseMode),
         maskProb(par.maskProb),
+        maskNrepeats(par.maskNrepeats),
         splitMode(par.splitMode),
         scoringMatrixFile(par.scoringMatrixFile),
         seedScoringMatrixFile(par.seedScoringMatrixFile),
         targetSeqType(targetSeqType),
+        targetSearchMode(par.targetSearchMode),
         maxResListLen(par.maxResListLen),
         sensitivity(par.sensitivity),
         maxSeqLen(par.maxSeqLen),
@@ -52,7 +53,8 @@ Prefiltering::Prefiltering(const std::string &queryDB,
         aaBiasCorrectionScale(par.compBiasCorrectionScale),
         covThr(par.covThr), covMode(par.covMode), includeIdentical(par.includeIdentity),
         preloadMode(par.preloadMode),
-        threads(static_cast<unsigned int>(par.threads)), compressed(par.compressed) {
+        threads(static_cast<unsigned int>(par.threads)),
+        compressed(par.compressed) {
     sameQTDB = isSameQTDB();
 
     // init the substitution matrices
@@ -173,7 +175,8 @@ Prefiltering::Prefiltering(const std::string &queryDB,
 
     takeOnlyBestKmer = (par.exactKmerMatching==1) ||
                        (Parameters::isEqualDbtype(targetSeqType, Parameters::DBTYPE_HMM_PROFILE) && Parameters::isEqualDbtype(querySeqType,Parameters::DBTYPE_AMINO_ACIDS)) ||
-                       (Parameters::isEqualDbtype(targetSeqType, Parameters::DBTYPE_NUCLEOTIDES) && Parameters::isEqualDbtype(querySeqType,Parameters::DBTYPE_NUCLEOTIDES));
+                       (Parameters::isEqualDbtype(targetSeqType, Parameters::DBTYPE_NUCLEOTIDES) && Parameters::isEqualDbtype(querySeqType,Parameters::DBTYPE_NUCLEOTIDES)) ||
+                       (targetSearchMode == 1);
 
     // memoryLimit in bytes
     size_t memoryLimit=Util::computeMemory(par.splitMemoryLimit);
@@ -203,6 +206,13 @@ Prefiltering::Prefiltering(const std::string &queryDB,
 
     Debug(Debug::INFO) << "Target database size: " << tdbr->getSize() << " type: " <<Parameters::getDbTypeName(targetSeqType) << "\n";
 
+    if (Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_AMINO_ACIDS)) {
+        kmerSubMat->alphabetSize = kmerSubMat->alphabetSize - 1;
+        _2merSubMatrix = getScoreMatrix(*kmerSubMat, 2);
+        _3merSubMatrix = getScoreMatrix(*kmerSubMat, 3);
+        kmerSubMat->alphabetSize = alphabetSize;
+    }
+
     if (splitMode == Parameters::QUERY_DB_SPLIT) {
         // create the whole index table
         getIndexTable(0, 0, tdbr->getSize());
@@ -214,15 +224,10 @@ Prefiltering::Prefiltering(const std::string &queryDB,
         EXIT(EXIT_FAILURE);
     }
 
-    if (Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_AMINO_ACIDS)) {
-        kmerSubMat->alphabetSize = kmerSubMat->alphabetSize - 1;
-        _2merSubMatrix = getScoreMatrix(*kmerSubMat, 2);
-        _3merSubMatrix = getScoreMatrix(*kmerSubMat, 3);
-        kmerSubMat->alphabetSize = alphabetSize;
-    }
+
 
     if (par.taxonList.length() > 0) {
-        taxonomyHook = new QueryMatcherTaxonomyHook(targetDB, tdbr, par.taxonList);
+        taxonomyHook = new QueryMatcherTaxonomyHook(targetDB, tdbr, par.taxonList, par.threads);
     } else {
         taxonomyHook = NULL;
     }
@@ -519,18 +524,20 @@ void Prefiltering::getIndexTable(int split, size_t dbFrom, size_t dbSize) {
         Sequence tseq(maxSeqLen, targetSeqType, kmerSubMat, kmerSize, spacedKmer, aaBiasCorrection, true, spacedKmerPattern);
         int localKmerThr = (Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_HMM_PROFILE) ||
                             Parameters::isEqualDbtype(querySeqType, Parameters::DBTYPE_NUCLEOTIDES) ||
-                            (Parameters::isEqualDbtype(targetSeqType, Parameters::DBTYPE_HMM_PROFILE) == false && takeOnlyBestKmer == true) ) ? 0 : kmerThr;
+                            (Parameters::isEqualDbtype(targetSeqType, Parameters::DBTYPE_HMM_PROFILE) == false && targetSearchMode == 0 && takeOnlyBestKmer == true) ) ? 0 : kmerThr;
 
         // remove X or N for seeding
         int adjustAlphabetSize = (Parameters::isEqualDbtype(targetSeqType, Parameters::DBTYPE_NUCLEOTIDES) ||
                                   Parameters::isEqualDbtype(targetSeqType,Parameters::DBTYPE_AMINO_ACIDS))
                                  ? alphabetSize -1 : alphabetSize;
         indexTable = new IndexTable(adjustAlphabetSize, kmerSize, false);
-        SequenceLookup **unmaskedLookup = maskMode == 0 && maskLowerCaseMode == 0 ? &sequenceLookup : NULL;
-        SequenceLookup **maskedLookup   = maskMode == 1 || maskLowerCaseMode == 1 ? &sequenceLookup : NULL;
 
         Debug(Debug::INFO) << "Index table k-mer threshold: " << localKmerThr << " at k-mer size " << kmerSize << " \n";
-        IndexBuilder::fillDatabase(indexTable, maskedLookup, unmaskedLookup, *kmerSubMat,  &tseq, tdbr, dbFrom, dbFrom + dbSize, localKmerThr, maskMode, maskLowerCaseMode, maskProb);
+        IndexBuilder::fillDatabase(indexTable, &sequenceLookup, *kmerSubMat,
+                                   _3merSubMatrix, _2merSubMatrix,
+                                   &tseq, tdbr, dbFrom, dbFrom + dbSize,
+                                   localKmerThr, maskMode, maskLowerCaseMode,
+                                   maskProb, maskNrepeats, targetSearchMode);
 
         // sequenceLookup has to be temporarily present to speed up masking
         // afterwards its not needed anymore without diagonal scoring
@@ -755,7 +762,6 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
     size_t doubleMatches = 0;
     size_t querySeqLenSum = 0;
     size_t resSize = 0;
-    size_t realResSize = 0;
     size_t diagonalOverflow = 0;
     size_t totalQueryDBSize = querySize;
 
@@ -875,7 +881,6 @@ bool Prefiltering::runSplit(const std::string &resultDB, const std::string &resu
                 querySeqLenSum += seq.L;
                 diagonalOverflow += matcher.getStatistics()->diagonalOverflow;
                 resSize += resultSize;
-                realResSize += std::min(resultSize, maxResListLen);
                 reslens[thread_idx]->emplace_back(resultSize);
             }
         } // step end

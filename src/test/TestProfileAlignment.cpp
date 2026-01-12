@@ -7,7 +7,7 @@
 #include <iostream>
 #include <string.h>
 #include <cmath>
-#include <PSSMCalculator.h>
+#include "PSSMCalculator.h"
 #include "Sequence.h"
 #include "Indexer.h"
 #include "ExtendedSubstitutionMatrix.h"
@@ -19,6 +19,7 @@
 #include "Parameters.h"
 
 const char* binary_name = "test_profilealignment";
+DEFAULT_PARAMETER_SINGLETON_INIT
 
 int main (int, const char**) {
     const size_t kmer_size=6;
@@ -754,7 +755,13 @@ int main (int, const char**) {
             "\x7f\x7d\x7d\x7d";
     std::cout << "Sequence (id 0):";
     //const char* sequence = read_seq;
-    PSSMCalculator pssmCalculator(&subMat, 10000, 10000, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
+    PSSMCalculator pssmCalculator(
+        &subMat, 10000, 10000, par.pcmode, par.pca, par.pcb
+#ifdef GAP_POS_SCORING
+        , par.gapOpen.values.aminoacid()
+        , par.gapPseudoCount
+#endif
+    );
     const size_t setSize = 1;
     const char * msaSeq[setSize] = {"LFILNIISMNKQTKVKGYLLLLLVISSLFISLVGHGYTANKVSAPNPAKEYPQDNLSVIDMKNLPGTQIKSMVKDELQQFLEEQGFRRLKNKSLVDLRRIWLGFMYEDFFYTMHKKTDLPISVIYAFFIIEATNAGIESKLMAKALNPGGIKYRGTGKKMKAMDDCY",
                         };
@@ -768,7 +775,7 @@ int main (int, const char**) {
                                   21 : subMat.aa2num[(int) msaSeq[k][pos]];
         }
     }
-    PSSMCalculator::Profile pssmRet = pssmCalculator.computePSSMFromMSA(setSize,centerSeqSize, (const char **) msaSequence, false);
+    PSSMCalculator::Profile pssmRet = pssmCalculator.computePSSMFromMSA(setSize,centerSeqSize, (const char **) msaSequence, false, 0.0);
     const char * sequence = pssmRet.pssm;
     char * data = new char[centerSeqSize*20+1];
     for (size_t i = 0; i < centerSeqSize*20; i++) {
@@ -788,7 +795,7 @@ int main (int, const char**) {
     const char* sequence2 = "LFILNIISMNKQTKVKGYLLLLLVISSLFISLVGHGYTANKVSAPNPAKEYPQDNLSVIDMKNLPGTQIKSMVKDELQQFLEEQGFRRLKNKSLVDLRRIWLGFMYEDFFYTMHKKTDLPISVIYAFFIIEATNAGIESKLMAKALNPGGIKYRGTGKKMKAMDDCY";
 
     dbSeq->mapSequence(1,1,sequence2, strlen(sequence2));
-    SmithWaterman aligner(15000, subMat.alphabetSize, false, 1.0, Parameters::DBTYPE_AMINO_ACIDS);
+    SmithWaterman aligner(15000, subMat.alphabetSize, false, 1.0, &subMat);
     int8_t * tinySubMat = new int8_t[subMat.alphabetSize*subMat.alphabetSize];
     aligner.ssw_init(s, s->getAlignmentProfile(), &subMat);
     int32_t maskLen = s->L / 2;
@@ -798,8 +805,6 @@ int main (int, const char**) {
     std::string backtrace;
     s_align alignment = aligner.ssw_align(
         dbSeq->numSequence,
-        dbSeq->numConsensusSequence,
-        dbSeq->getAlignmentProfile(),
         dbSeq->L,
         backtrace,
         gap_open, gap_extend,
@@ -808,8 +813,7 @@ int main (int, const char**) {
         &evalueComputation,
         0, 0.0,
         0.0,
-        maskLen,
-        dbSeq->getId()
+        maskLen
     );
     if(alignment.cigar){
         std::cout << "Cigar" << std::endl;

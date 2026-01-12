@@ -19,31 +19,42 @@ public:
         char * pssm;
         float * prob;
         const float * neffM;
+#ifdef GAP_POS_SCORING
         const uint8_t *gDel;
         const uint8_t *gIns;
+#endif
 //        std::string consensus;
         unsigned char * consensus;
 
-//        Profile(char *pssm, float *prob, float *neffM, const uint8_t *gDel, const uint8_t *gIns, std::string consensus)
-//                : pssm(pssm), prob(prob), neffM(neffM), gDel(gDel), gIns(gIns), consensus(consensus) {
-//        }
+#ifdef GAP_POS_SCORING
         Profile(char *pssm, float *prob, float *neffM, const uint8_t *gDel, const uint8_t *gIns, unsigned char * consensus)
-                : pssm(pssm), prob(prob), neffM(neffM), gDel(gDel), gIns(gIns), consensus(consensus) {
-        }
+                : pssm(pssm), prob(prob), neffM(neffM), gDel(gDel), gIns(gIns), consensus(consensus) {}
+#else
+        Profile(char *pssm, float *prob, float *neffM, unsigned char * consensus)
+                : pssm(pssm), prob(prob), neffM(neffM), consensus(consensus) {}
+#endif
         void toBuffer(const unsigned char* centerSequence, size_t centerSeqLen, BaseMatrix& subMat, std::string& result);
         void toBuffer(Sequence& centerSequence, BaseMatrix& subMat, std::string& result);
     };
 
     PSSMCalculator(SubstitutionMatrix *subMat, size_t maxSeqLength, size_t maxSetSize, int pcmode,
-                   MultiParam<PseudoCounts> pca, MultiParam<PseudoCounts> pcb, int gapOpen, int gapPseudoCount);
+                   MultiParam<PseudoCounts> pca, MultiParam<PseudoCounts> pcb
+#ifdef GAP_POS_SCORING
+                   , int gapOpen
+                   , int gapPseudoCount
+#endif
+    );
 
     ~PSSMCalculator();
 
-    Profile computePSSMFromMSA(size_t setSize, size_t queryLength, const char **msaSeqs, bool wg);
-    Profile computePSSMFromMSA(size_t setSize, size_t queryLength, const char **msaSeqs, const std::vector<Matcher::result_t> &alnResults, bool wg);
+    Profile computePSSMFromMSA(size_t setSize, size_t queryLength, const char **msaSeqs, bool wg, float scoreBias);
+#ifdef GAP_POS_SCORING
+    Profile computePSSMFromMSA(size_t setSize, size_t queryLength, const char **msaSeqs, const std::vector<Matcher::result_t> &alnResults, bool wg, float scoreBias);
+#endif
 
     void printProfile(size_t queryLength);
     void printPSSM(size_t queryLength);
+    void profileToString(std::string& result, size_t queryLength);
 
     // prepare pseudocounts
     static void preparePseudoCounts(float *frequency, float *frequency_with_pseudocounts, size_t entrySize, size_t queryLength, const float **R);
@@ -94,6 +105,7 @@ private:
     // Consensus sequence
     unsigned char * consensusSequence;
 
+#ifdef GAP_POS_SCORING
     // position-specific deletion penalties
     uint8_t *gDel;
 
@@ -103,6 +115,12 @@ private:
     // preallocated memory for computing of gap penalties
     std::vector<float> gapWeightsIns;
 
+    // default gap opening penalty
+    int gapOpen;
+
+    // pseudo count for calculation of gap opening penalties
+    int gapPseudoCount;
+#endif
 
     // number of sequences in subalignment i (only for DEBUGGING)
     int *nseqs;
@@ -127,12 +145,6 @@ private:
     size_t maxSeqLength;
     size_t maxSetSize;
 
-    // default gap opening penalty
-    int gapOpen;
-
-    // pseudo count for calculation of gap opening penalties
-    int gapPseudoCount;
-
     // compute the Neff_M per column -p log(p)
     void computeNeff_M(float *frequency, float *seqWeight, float *Neff_M, size_t queryLength, size_t setSize, char const **msaSeqs);
 
@@ -148,8 +160,10 @@ private:
 //    std::string computeConsensusSequence(float *pDouble, size_t queryLength, double *back, char *num2aa);
     void increaseSetSize(size_t newSetSize);
 
+#ifdef GAP_POS_SCORING
     // compute position-specific gap penalties for both deletions and insertions
     void computeGapPenalties(size_t queryLength, size_t setSize, const char **msaSeqs, const std::vector<Matcher::result_t> &alnResults);
+#endif
 
     void fillCounteProfile(float *counts, float *matchWeight, float *Neff_M, size_t queryLength);
 };

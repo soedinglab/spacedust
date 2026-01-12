@@ -13,7 +13,6 @@ set(TESTS
         TestDBReaderIndexSerialization.cpp
         TestDiagonalScoring.cpp
         TestDiagonalScoringPerformance.cpp
-        TestIndexTable.cpp
         TestKmerGenerator.cpp
         TestKmerNucl.cpp
         TestKmerScore.cpp
@@ -34,6 +33,7 @@ set(TESTS
         TestUtil.cpp
         TestKsw2.cpp
         TestBestAlphabet.cpp
+        TestUngappedCpuPerf.cpp
         )
 
 

@@ -15,6 +15,7 @@
 #include "MultipleAlignment.h"
 
 const char* binary_name = "test_pssm";
+DEFAULT_PARAMETER_SINGLETON_INIT
 
 int main (int, const char**) {
     Parameters& par = Parameters::getInstance();
@@ -1604,8 +1605,14 @@ int main (int, const char**) {
     }
 
     //seqSet.push_back(s5);
-    PSSMCalculator pssm(&subMat, 122, counter, par.pcmode, par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
-    pssm.computePSSMFromMSA(filteredSetSize, res.centerLength, (const char**) res.msaSequence, false);
+    PSSMCalculator pssm(
+        &subMat, 122, counter, par.pcmode, par.pca, par.pcb
+#ifdef GAP_POS_SCORING
+        , par.gapOpen.values.aminoacid()
+        , par.gapPseudoCount
+#endif
+    );
+    pssm.computePSSMFromMSA(filteredSetSize, res.centerLength, (const char**) res.msaSequence, false, 0.0);
     //pssm.printProfile(res.centerLength);
     pssm.printPSSM(res.centerLength);
     MultipleAlignment::deleteMSA(&res);

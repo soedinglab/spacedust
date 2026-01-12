@@ -7,12 +7,14 @@ set(workflow_source_files
         workflow/EasyRbh.cpp
         workflow/EasyCluster.cpp
         workflow/EasyLinclust.cpp
+        workflow/EasyProteomecluster.cpp
         workflow/Enrich.cpp
         workflow/Linsearch.cpp
         workflow/Map.cpp
         workflow/Rbh.cpp
         workflow/Search.cpp
         workflow/Taxonomy.cpp
+        workflow/PickConsensusRep.cpp
         workflow/EasyTaxonomy.cpp
         workflow/CreateIndex.cpp
         PARENT_SCOPE

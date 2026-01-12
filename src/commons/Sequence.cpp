@@ -7,7 +7,6 @@
 #include "MathUtil.h"
 #include "SubstitutionMatrixProfileStates.h"
 #include "PSSMCalculator.h"
-
 #include <climits> // short_max
 #include <cstddef>
 
@@ -63,11 +62,12 @@ Sequence::Sequence(size_t maxLen, int seqType, const BaseMatrix *subMat, const u
         }
         this->pNullBuffer           = new float[maxLen + 1];
         this->neffM                 = new float[maxLen + 1];
+#ifdef GAP_POS_SCORING
         this->gDel                  = new uint8_t[maxLen + 1];
         this->gIns                  = new uint8_t[maxLen + 1];
+#endif
         this->profile_score         = (short *)        mem_align(ALIGN_INT, (maxLen + 1) * profile_row_size * sizeof(short));
         this->profile_index         = (unsigned int *) mem_align(ALIGN_INT, (maxLen + 1) * profile_row_size * sizeof(int));
-        this->pseudocountsWeight    = (float *)        mem_align(ALIGN_INT, (maxLen + 1) * profile_row_size * sizeof(float));
         this->profile_for_alignment = (int8_t *)       mem_align(ALIGN_INT, (maxLen + 1) * subMat->alphabetSize * sizeof(int8_t));
         // init profile
         memset(this->profile_for_alignment, 0, (maxLen + 1) * subMat->alphabetSize * sizeof(int8_t));
@@ -97,10 +97,11 @@ Sequence::~Sequence() {
         }
         delete[] profile_matrix;
         delete[] neffM;
+#ifdef GAP_POS_SCORING
         delete[] gDel;
         delete[] gIns;
+#endif
         delete[] pNullBuffer;
-        free(pseudocountsWeight);
         free(profile_score);
         free(profile_index);
         free(profile_for_alignment);
@@ -225,7 +226,11 @@ void Sequence::mapSequence(size_t id, unsigned int dbKey, std::pair<const unsign
             numSequence = static_cast<unsigned char *>(realloc(numSequence, this->L+1));
             maxLen = this->L;
         }
-        memcpy(this->numSequence, data.first, this->L);
+        // map softmasked sequences to regular sequences
+        // softmasked character start at 32
+        for(int i = 0; i < this->L; i++){
+            this->numSequence[i] = ( data.first[i] >= 32) ? data.first[i] - 32 : data.first[i];
+        }
     } else {
         Debug(Debug::ERROR) << "Invalid sequence type!\n";
         EXIT(EXIT_FAILURE);
@@ -249,8 +254,10 @@ void Sequence::mapProfile(const char * profileData, unsigned int seqLen){
             numSequence[l] = queryLetter; // index 0 is the highst scoring one
             numConsensusSequence[l] = data[currPos + PROFILE_CONSENSUS];
             neffM[l] = MathUtil::convertNeffToFloat(data[currPos + PROFILE_NEFF]);
+#ifdef GAP_POS_SCORING
             gDel[l] = data[currPos + PROFILE_GAP_DEL];
             gIns[l] = data[currPos + PROFILE_GAP_INS];
+#endif
             l++;
             // go to begin of next entry 0, 20, 40, 60, ...
             currPos += PROFILE_READIN_SIZE;
@@ -298,18 +305,22 @@ void Sequence::nextProfileKmer() {
 }
 
 void Sequence::mapSequence(const char * sequence, unsigned int dataLen){
-    size_t l = 0;
-    char curr = sequence[l];
     if(dataLen >= maxLen){
         numSequence = static_cast<unsigned char*>(realloc(numSequence, dataLen+1));
         maxLen = dataLen;
     }
-    while (curr != '\0' && curr != '\n' && l < dataLen &&  l < maxLen){
-        this->numSequence[l] = subMat->aa2num[static_cast<int>(curr)];
-        l++;
-        curr  = sequence[l];
+    const unsigned char* lookup = subMat->aa2num;  // local pointer for speed
+    unsigned int i = 0;
+    for (; i + 4 <= dataLen; i += 4) {
+        numSequence[i]   = lookup[(unsigned char)sequence[i]];
+        numSequence[i+1] = lookup[(unsigned char)sequence[i+1]];
+        numSequence[i+2] = lookup[(unsigned char)sequence[i+2]];
+        numSequence[i+3] = lookup[(unsigned char)sequence[i+3]];
     }
-    this->L = l;
+    for (; i < dataLen; i++) {
+        numSequence[i]   = lookup[(unsigned char)sequence[i]];
+    }
+    this->L = i;
 }
 
 void Sequence::printPSSM(){
@@ -335,13 +346,16 @@ void Sequence::printProfile() const {
     for (size_t aa = 0; aa < PROFILE_AA_SIZE; aa++) {
         printf("%6c ", subMat->num2aa[aa]);
     }
-    printf("gDO gDC gIn\n");
     for (int i = 0; i < this->L; i++){
         printf("%3d ", i);
         for (size_t aa = 0; aa < PROFILE_AA_SIZE; aa++){
             printf("%d ", profile_score[i * profile_row_size + profile_index[i * profile_row_size + aa]]);
         }
+#ifdef GAP_POS_SCORING
         printf("%3d %3d %3d\n", gDel[i] & 0xF, gDel[i] >> 4, gIns[i]);
+else
+        printf("\n");
+#endif
     }
 }
 

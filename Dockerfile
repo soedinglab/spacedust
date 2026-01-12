@@ -1,54 +1,62 @@
+ARG TARGETARCH
 ARG APP=mmseqs
-FROM --platform=$BUILDPLATFORM debian:stable-slim as builder
+ARG GPU=0
+
+FROM --platform=$BUILDPLATFORM ghcr.io/steineggerlab/build-containers:main-sbsa AS builder-arm64
+
+FROM --platform=$BUILDPLATFORM ghcr.io/steineggerlab/build-containers:main-x86_64 AS builder-amd64
+
+FROM builder-${TARGETARCH} AS builder
 ARG TARGETARCH
 ARG APP
-
-RUN dpkg --add-architecture $TARGETARCH \
-    && apt-get update \
-    && apt-get install -y \
-      build-essential cmake xxd git \
-      zlib1g-dev libbz2-dev libatomic1 \
-      crossbuild-essential-$TARGETARCH zlib1g-dev:$TARGETARCH libbz2-dev:$TARGETARCH \
-    && rm -rf /var/lib/apt/lists/*
+ARG GPU
 
 WORKDIR /opt/build
 ADD . .
-
-RUN if [ "$TARGETARCH" = "arm64" ]; then \
-      mkdir -p build_$TARGETARCH/src; \
-      cd /opt/build/build_$TARGETARCH; \
-      CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ cmake -DHAVE_ARM8=1 -DHAVE_MPI=0 -DHAVE_TESTS=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=. ..; \
-      make -j $(nproc --all); \
-      mv src/${APP} /opt/build/${APP}_arch; \
-      touch /opt/build/${APP}_sse2 /opt/build/${APP}_sse41 /opt/build/${APP}_avx2; \
+RUN set -x; \
+    mkdir -p build/src; \
+    cd /opt/build/build; \
+    if [ "$TARGETARCH" = "arm64" ]; then \
+      /usr/local/bin/cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DHAVE_TESTS=1 -DENABLE_WERROR=1 -DHAVE_ARM8=1 \
+          -DCMAKE_TOOLCHAIN_FILE=/opt/toolchain.cmake \
+          -DOpenMP_C_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AARCH64} -pthread" -DOpenMP_C_LIB_NAMES=omp \
+          -DOpenMP_CXX_FLAGS="-Xpreprocessor -fopenmp -I${LIBOMP_AARCH64} -pthread" -DOpenMP_CXX_LIB_NAMES=omp \
+          -DOpenMP_C_LIB_NAMES="libomp;dl" \
+          -DOpenMP_CXX_LIB_NAMES="libomp;dl" \
+          -DOpenMP_libomp_LIBRARY=${LIBOMP_AARCH64}/libomp.a \
+          -DOpenMP_dl_LIBRARY=dl \
+          -DRust_TOOLCHAIN=stable-x86_64-unknown-linux-gnu \
+          -DRust_CARGO_TARGET=aarch64-unknown-linux-gnu \
+          -DCMAKE_POLICY_DEFAULT_CMP0074=NEW -DCMAKE_POLICY_DEFAULT_CMP0144=NEW \
+          -DFORCE_STATIC_DEPS=1 -DENABLE_CUDA=${GPU} -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90" ..; \
+      /usr/local/bin/cmake --build . -j$(nproc --all) -v; \
     else \
-      mkdir -p build_sse2/src && mkdir -p build_sse41/src && mkdir -p build_avx2/src; \
-      cd /opt/build/build_sse2; \
-      cmake -DHAVE_SSE2=1 -DHAVE_MPI=0 -DHAVE_TESTS=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=. ..; \
-      make -j $(nproc --all); \
-      mv src/${APP} /opt/build/${APP}_sse2; \
-      cd /opt/build/build_sse41; \
-      cmake -DHAVE_SSE4_1=1 -DHAVE_MPI=0 -DHAVE_TESTS=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=. ..; \
-      make -j $(nproc --all); \
-      mv src/${APP} /opt/build/${APP}_sse41; \
-      cd /opt/build/build_avx2; \
-      cmake -DHAVE_AVX2=1 -DHAVE_MPI=0 -DHAVE_TESTS=0 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=. ..; \
-      make -j $(nproc --all); \
-      mv src/${APP} /opt/build/${APP}_avx2; \
-      touch /opt/build/${APP}_arch; \
-    fi
+      if [ -e "${LIBGCC}/libgomp.so" ]; then \
+          mv -f -- "${LIBGCC}/libgomp.so" "${LIBGCC}/libgomp.so.disabled"; \
+      fi; \
+      /usr/local/bin/cmake -GNinja -DCMAKE_BUILD_TYPE=Release -DHAVE_TESTS=1 -DENABLE_WERROR=1 -DHAVE_AVX2=1 \
+          -DOpenMP_C_FLAGS="-fopenmp -I${LIBGCC} -L${LIBGCC}" -DOpenMP_C_LIB_NAMES=gomp \
+          -DOpenMP_CXX_FLAGS="-fopenmp -I${LIBGCC} -L${LIBGCC}" -DOpenMP_CXX_LIB_NAMES=gomp \
+          -DOpenMP_gomp_LIBRARY="${LIBGCC}/libgomp.a" \
+          -DATOMIC_LIB_OVERRIDE="${LIBGCC}/libatomic.a" \
+          -DCMAKE_POLICY_DEFAULT_CMP0074=NEW -DCMAKE_POLICY_DEFAULT_CMP0144=NEW \
+          -DZLIB_ROOT=/deps -DBZIP2_ROOT=/deps \
+          -DFORCE_STATIC_DEPS=1 -DENABLE_CUDA=${GPU} -DCMAKE_CUDA_ARCHITECTURES="75-real;80-real;86-real;89-real;90" ..; \
+      /usr/local/bin/cmake --build . -j$(nproc --all) -v; \
+    fi; \
+    mv src/${APP} /opt/build/${APP};
 
-FROM debian:stable-slim
+FROM debian:trixie-slim
 ARG TARGETARCH
 ARG APP
+ARG GPU
+
+COPY --from=builder /opt/build/${APP} /usr/local/bin/
 
 RUN apt-get update && apt-get install -y \
-      gawk bash grep libstdc++6 libgomp1 libatomic1 zlib1g libbz2-1.0 wget tar \
-    && rm -rf /var/lib/apt/lists/*
+  gawk bash grep wget tar aria2 \
+  && rm -rf /var/lib/apt/lists/*;
 
-COPY --from=builder /opt/build/${APP}_arch /opt/build/${APP}_sse2 /opt/build/${APP}_sse41 /opt/build/${APP}_avx2 /usr/local/bin/
-ADD util/${APP}_wrapper.sh /usr/local/bin/entrypoint
-RUN if [ "$TARGETARCH" = "arm64" ]; then rm -f /usr/local/bin/entrypoint; ln -s /usr/local/bin/${APP}_arch /usr/local/bin/entrypoint; fi
-
+RUN echo "#!/bin/sh\nexec /usr/local/bin/$APP \"\${@}\"" > /usr/local/bin/entrypoint && chmod +x /usr/local/bin/entrypoint
+RUN cat /usr/local/bin/entrypoint
 ENTRYPOINT ["/usr/local/bin/entrypoint"]
-

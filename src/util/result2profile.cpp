@@ -1,7 +1,6 @@
 #include "MsaFilter.h"
 #include "Parameters.h"
 #include "PSSMCalculator.h"
-#include "PSSMMasker.h"
 #include "DBReader.h"
 #include "DBWriter.h"
 #include "Debug.h"
@@ -9,6 +8,7 @@
 #include "FileUtil.h"
 #include "tantan.h"
 #include "IndexReader.h"
+#include "Masker.h"
 
 #ifdef OPENMP
 #include <omp.h>
@@ -104,7 +104,11 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
     }
 
     int type = Parameters::DBTYPE_HMM_PROFILE;
-    if (returnAlnRes) {
+    const int writePlain = par.profileOutputMode == 1;
+    if (par.profileOutputMode == 1) {
+        type = Parameters::DBTYPE_OMIT_FILE;
+        par.compressed = false;
+    } else if (returnAlnRes) {
         type = Parameters::DBTYPE_ALIGNMENT_RES;
         if (needSrcIndex) {
             type = DBReader<unsigned int>::setExtendedDbtype(type, Parameters::DBTYPE_EXTENDED_INDEX_NEED_SRC);
@@ -120,7 +124,6 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
 
     // adjust score of each match state by -0.2 to trim alignment
     SubstitutionMatrix subMat(par.scoringMatrixFile.values.aminoacid().c_str(), 2.0f, -0.2f);
-    ProbabilityMatrix probMatrix(subMat);
     EvalueComputation evalueComputation(tDbr->getAminoAcidDBSize(), &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
 
     if (qDbr->getDbtype() == -1 || targetSeqType == -1) {
@@ -144,13 +147,18 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
         thread_idx = (unsigned int) omp_get_thread_num();
 #endif
 
-        Matcher matcher(qDbr->getDbtype(), tDbr->getDbtype(), maxSequenceLength, &subMat, &evalueComputation,
+        Matcher matcher(qDbr->getDbtype(), maxSequenceLength, &subMat, &evalueComputation,
                         par.compBiasCorrection, par.compBiasCorrectionScale,
                         par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid(), 0.0, par.zdrop);
-        PSSMMasker masker(maxSequenceLength, probMatrix, subMat);
+        Masker masker(subMat);
         MultipleAlignment aligner(maxSequenceLength, &subMat);
-        PSSMCalculator calculator(&subMat, maxSequenceLength, maxSetSize, par.pcmode,
-                                  par.pca, par.pcb, par.gapOpen.values.aminoacid(), par.gapPseudoCount);
+        PSSMCalculator calculator(
+            &subMat, maxSequenceLength, maxSetSize, par.pcmode, par.pca, par.pcb
+#ifdef GAP_POS_SCORING
+            , par.gapOpen.values.aminoacid()
+            , par.gapPseudoCount
+#endif
+        );
         MsaFilter filter(maxSequenceLength, maxSetSize, &subMat, par.gapOpen.values.aminoacid(), par.gapExtend.values.aminoacid());
         Sequence centerSequence(maxSequenceLength, qDbr->getDbtype(), &subMat, 0, false, par.compBiasCorrection);
         Sequence edgeSequence(maxSequenceLength, targetSeqType, &subMat, 0, false, false);
@@ -251,19 +259,30 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
                 }
 
                 PSSMCalculator::Profile pssmRes = calculator.computePSSMFromMSA(filteredSetSize, res.centerLength,
-                                                                                (const char **) res.msaSequence, alnResults, par.wg);
-                if (par.compBiasCorrection == true){
-                    SubstitutionMatrix::calcGlobalAaBiasCorrection(&subMat, pssmRes.pssm, pNullBuffer,
-                                                                   Sequence::PROFILE_AA_SIZE,
-                                                                   res.centerLength);
-                }
-
-                if (par.maskProfile == true) {
-                    masker.mask(centerSequence, par.maskProb, pssmRes);
-                }
-                pssmRes.toBuffer(centerSequence, subMat, result);
+                                                                                (const char **) res.msaSequence,
+#ifdef GAP_POS_SCORING
+                                                                                alnResults,
+#endif
+                                                                                par.wg, 0.0);
+                if (writePlain) {
+                    result.clear();
+                    result.append("Query profile of sequence ");
+                    result.append(SSTR(queryKey));
+                    result.push_back('\n');
+                    calculator.profileToString(result, res.centerLength);
+                } else {                                                                
+                    if (par.compBiasCorrection == true){
+                        SubstitutionMatrix::calcGlobalAaBiasCorrection(&subMat, pssmRes.pssm, pNullBuffer,
+                                                                    Sequence::PROFILE_AA_SIZE,
+                                                                    res.centerLength);
+                    }
+                    if (par.maskProfile == true) {
+                        masker.maskPssm(centerSequence, par.maskProb, pssmRes);
+                    }
+                    pssmRes.toBuffer(centerSequence, subMat, result);
+                } 
             }
-            resultWriter.writeData(result.c_str(), result.length(), queryKey, thread_idx);
+            resultWriter.writeData(result.c_str(), result.length(), queryKey, thread_idx, writePlain == false);
             result.clear();
             alnResults.clear();
 
@@ -272,7 +291,10 @@ int result2profile(int argc, const char **argv, const Command &command, bool ret
         }
         delete[] pNullBuffer;
     }
-    resultWriter.close(returnAlnRes == false);
+    resultWriter.close(returnAlnRes == false || writePlain == true);
+    if (writePlain) {
+        FileUtil::remove(par.db4Index.c_str());
+    }
     resultReader.close();
 
     if (!sameDatabase) {

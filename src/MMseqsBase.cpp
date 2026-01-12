@@ -22,7 +22,7 @@ std::vector<Command> baseCommands = {
                 "mmseqs easy-search examples/QUERY.fasta examples/DB.fasta result.m8 tmp --start-sens 2 -s 7 --sens-steps 3\n",
                 "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:queryFastaFile1[.gz|.bz2]> ... <i:queryFastaFileN[.gz|.bz2]>|<i:stdin> <i:targetFastaFile[.gz]>|<i:targetDB> <o:alignmentFile> <tmpDir>",
-                CITATION_SERVER | CITATION_MMSEQS2,{{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &DbValidator::flatfileAndStdin },
+                CITATION_SERVER | CITATION_MMSEQS2 | CITATION_GPU ,{{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &DbValidator::flatfileAndStdin },
                                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                                            {"alignmentFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
@@ -39,9 +39,9 @@ std::vector<Command> baseCommands = {
                 "Slower, sensitive clustering",
                 "mmseqs easy-cluster examples/DB.fasta result tmp\n"
                 "# Cluster output\n"
-                "#  - result_rep_seq.fasta: Representatives\n"
-                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
-                "#  - result_cluster.tsv:   Adjacency list\n\n"
+                "#  - result_rep_seq.fasta:  Representatives\n"
+                "#  - result_all_seqs.fasta: FASTA-like per cluster\n"
+                "#  - result_cluster.tsv:    Adjacency list\n\n"
                 "# Important parameter: --min-seq-id, --cov-mode and -c \n"
                 "#                  --cov-mode \n"
                 "#                  0    1    2\n"
@@ -62,9 +62,9 @@ std::vector<Command> baseCommands = {
                 "Fast linear time cluster, less sensitive clustering",
                 "mmseqs easy-linclust examples/DB.fasta result tmp\n\n"
                 "# Linclust output\n"
-                "#  - result_rep_seq.fasta: Representatives\n"
-                "#  - result_all_seq.fasta: FASTA-like per cluster\n"
-                "#  - result_cluster.tsv:   Adjecency list\n\n"
+                "#  - result_rep_seq.fasta:  Representatives\n"
+                "#  - result_all_seqs.fasta: FASTA-like per cluster\n"
+                "#  - result_cluster.tsv:    Adjecency list\n\n"
                 "# Important parameter: --min-seq-id, --cov-mode and -c \n"
                 "#                  --cov-mode \n"
                 "#                  0    1    2\n"
@@ -79,6 +79,23 @@ std::vector<Command> baseCommands = {
                 CITATION_MMSEQS2|CITATION_LINCLUST, {{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &DbValidator::flatfileAndStdin },
                                                             {"clusterPrefix", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                                             {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
+        {"easy-proteomecluster", easyproteomecluster, &par.easyproteomeclusterworkflow, COMMAND_EASY,
+                "Cluster proteomes and identify reference proteomes",
+                "mmseqs easy-proteomecluster examples/ProteomeDBPaths.tsv(examples/fastaFile1.fa...fastaFile1.fa) result tmp\n\n"
+                "# ProteomeCluster output\n"
+                "#  - result_protein_cluster.tsv:  Results of protein clustering (linclust/cluster)\n"
+                "#  - result_proteome_cluster.tsv: Results of proteome clustering including similarity to the reference proteome \n"
+                "#  - result_protein_align.tsv: Results of protein alignments\n"
+                "#  - result_cluster_count.tsv: Number of clusters containing proteins from each proteome (from protein clustering results)\n"
+                "# Clustering multiple proteomes with linclust for protein clustering(cluster-module 0)\n"
+                "mmseqs easy-proteomecluster examples/ProteomeDBPaths.tsv(examples/fastaFile1.fa...fastaFile1.fa) result tmp --proteome-similarity 0.9 -c 0.8 --cov-mode 1 --cluster-module 0 \n"
+                "# Cascade clustering: iteratively cluster remaining proteomes with protein clustering while selecting reference proteomes\n"
+                "mmseqs easy-proteomecluster examples/ProteomeDBPaths.tsv(examples/fastaFile1.fa...fastaFile1.fa) result tmp --proteome-similarity 0.9 -c 0.8 --cov-mode 1 --proteome-cascaded-clustering 1 \n",
+                "Gyuri Kim <gyuribio@snu.ac.kr> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:fastaFile1[.gz|.bz2]> ... <i:fastaFileN[.gz|.bz2]> <o:clusterPrefix> <tmpDir>",
+                CITATION_MMSEQS2, {{"fastaFile[.gz|.bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::VARIADIC, &DbValidator::flatfileAndStdin },
+                                        {"outputReports", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile },
+                                        {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"easy-taxonomy",        easytaxonomy,         &par.easytaxonomy,         COMMAND_EASY,
                 "Taxonomic classification",
                 "# Assign taxonomic labels to FASTA sequences\n"
@@ -130,6 +147,13 @@ std::vector<Command> baseCommands = {
                 "<i:fastaFile1[.gz|.bz2]> ... <i:fastaFileN[.gz|.bz2]>|<i:stdin> <o:sequenceDB>",
                 CITATION_MMSEQS2, {{"fast[a|q]File[.gz|bz2]|stdin", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfileStdinAndGeneric },
                                                            {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
+        {"makepaddedseqdb",               makepaddedseqdb,              &par.makepaddedseqdb,              COMMAND_HIDDEN,
+                "Generate a padded sequence DB",
+                "Generate a padded sequence DB",
+                "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:sequenceDB> <o:sequenceDB>",
+                CITATION_GPU, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_HEADER, &DbValidator::sequenceDb },
+                                          {"sequenceIndexDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
         {"appenddbtoindex",      appenddbtoindex,      &par.appenddbtoindex,      COMMAND_HIDDEN,
                 NULL,
                 NULL,
@@ -137,7 +161,7 @@ std::vector<Command> baseCommands = {
                 "<i:DB1> ... <i:DBN> <o:DB>",
                 CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::allDb },
                                    {"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
-       {"indexdb",               indexdb,              &par.indexdb,              COMMAND_HIDDEN,
+        {"indexdb",               indexdb,              &par.indexdb,              COMMAND_HIDDEN,
                 NULL,
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
@@ -212,7 +236,7 @@ std::vector<Command> baseCommands = {
                 "mmseqs search queryDB targetDB resultDB --start-sens 2 -s 7 --sens-steps 3\n",
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <o:alignmentDB> <tmpDir>",
-                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                CITATION_MMSEQS2 | CITATION_GPU, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
@@ -399,6 +423,13 @@ std::vector<Command> baseCommands = {
                                    {"nodes.dmp", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                    {"merged.dmp", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
                                    {"taxonomyFile",   DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
+        {"createdmptaxonomy",    createdmptaxonomy,    &par.onlyverbosity,        COMMAND_TAXONOMY | COMMAND_EXPERT,
+                "Create dmp files from binary taxonomy",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:taxonomyFile> <i:dmpBase>",
+                CITATION_TAXONOMY, {{"taxonomyFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile },
+                                   {"dmpBase", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"createbintaxmapping",  createbintaxmapping,  &par.onlyverbosity,        COMMAND_TAXONOMY | COMMAND_EXPERT,
                 "Create binary taxonomy mapping from tabular taxonomy mapping",
                 NULL,
@@ -411,16 +442,16 @@ std::vector<Command> baseCommands = {
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:targetDB> <i:resultDB> <o:resultDB>",
-                CITATION_TAXONOMY, {{"targetDB", DbType::ACCESS_MODE_INPUT|DbType::NEED_TAXONOMY, DbType::NEED_DATA, &DbValidator::taxSequenceDb },
+                CITATION_TAXONOMY, {{"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_TAXONOMY, &DbValidator::taxSequenceDb },
                                                            {"resultDB",   DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                                            {"resultDB",   DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"taxonomyreport",       taxonomyreport,       &par.taxonomyreport,       COMMAND_TAXONOMY | COMMAND_FORMAT_CONVERSION,
                 "Create a taxonomy report in Kraken or Krona format",
                 NULL,
                 "Milot Mirdita <milot@mirdita.de> & Florian Breitwieser <florian.bw@gmail.com>",
-                "<i:seqTaxDB> <i:taxResultDB/resultDB/sequenceDB> <o:taxonomyReport>",
+                "<i:seqTaxDB> <i:taxResultDB/resultDB/sequenceDB> <o:taxonomyReport|krakenDB>",
                 CITATION_TAXONOMY, {{"seqTaxDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA|DbType::NEED_TAXONOMY, &DbValidator::taxSequenceDb },
-                                                           {"taxResultDB/resultDB/sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC,  &DbValidator::taxonomyReportInput },
+                                                           {"taxResultDB/resultDB/sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::taxonomyReportInput },
                                                            {"taxonomyReport",    DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"filtertaxdb",          filtertaxdb,          &par.filtertaxdb,          COMMAND_TAXONOMY,
                 "Filter taxonomy result database",
@@ -555,7 +586,7 @@ std::vector<Command> baseCommands = {
                                                            {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                                            {"pvalDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"mergeresultsbyset",    mergeresultsbyset,    &par.threadsandcompression,COMMAND_MULTIHIT,
+        {"mergeresultsbyset",    mergeresultsbyset,    &par.mergeresultsbyset,    COMMAND_MULTIHIT,
                 "Merge results from multiple ORFs back to their respective contig",
                 NULL,
                 "Ruoshi Zhang, Clovis Norroy & Milot Mirdita <milot@mirdita.de>",
@@ -565,7 +596,15 @@ std::vector<Command> baseCommands = {
                                                            {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
 
 
-
+        {"pickconsensusrep", pickconsensusrep,            &par.verbandcompression,            COMMAND_CLUSTER,
+                "Select new representatives for each cluster based on consensus",
+                NULL,
+                "Martin Steinegger <martin.steinegger@snu.ac.kr> & Maria Hauser",
+                "<i:seqDb> <i:clusterDB> <o:clusterDB> <tmpDir>",
+                CITATION_MMSEQS2, {{"seqDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"clusterDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
+                                          {"clusterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::clusterDb },
+                                          {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
         {"prefilter",            prefilter,            &par.prefilter,            COMMAND_PREFILTER,
                 "Double consecutive diagonal k-mer search",
                 NULL,
@@ -578,9 +617,17 @@ std::vector<Command> baseCommands = {
         {"ungappedprefilter",    ungappedprefilter,    &par.ungappedprefilter,    COMMAND_PREFILTER,
                 "Optimal diagonal score search",
                 NULL,
-                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:queryDB> <i:targetDB> <o:prefilterDB>",
-                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                CITATION_MMSEQS2 | CITATION_GPU, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                           {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::prefilterDb }}},
+        {"gappedprefilter",      gappedprefilter,      &par.gappedprefilter,      COMMAND_PREFILTER,
+                "Optimal Smith-Waterman-based prefiltering (slow)",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <o:prefilterDB>",
+                CITATION_MMSEQS2 | CITATION_GPU, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"prefilterDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::prefilterDb }}},
         {"kmermatcher",          kmermatcher,          &par.kmermatcher,          COMMAND_PREFILTER,
@@ -625,6 +672,16 @@ std::vector<Command> baseCommands = {
                 CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                                            {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
+        {"proteomecluster",             proteomecluster,             &par.proteomecluster,             COMMAND_CLUSTPROTEOME,
+                "Cluster proteomes and identify reference proteomes",
+                NULL,
+                "Gyuri Kim <gyuribio@snu.ac.kr> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:sequenceDB> <i:clustresultDB> <o:proteomeAlignmentResultDB> <o:proteomeClusterCountReport> <o:proteinAlignmenResultDB> ",
+                CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                                                {"clustresultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
+                                                                {"proteomeAlignmentResultDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                                                {"proteomeClusterCountReport", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                                                {"proteinAlignmenResultDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
         {"transitivealign",      transitivealign,      &par.align,                COMMAND_ALIGNMENT,
                 "Transfer alignments via transitivity",
                 //"Infer the alignment A->C via B, B being the center sequence and A,C each pairwise aligned against B",
@@ -643,6 +700,15 @@ std::vector<Command> baseCommands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
+        {"fwbw",                fwbw,                   &par.fwbw,                COMMAND_ALIGNMENT,
+                "Forward Backward Alignment",
+                NULL,
+                "Gyuri Kim <gyuribio@snu.ac.kr> & Soohyun Kim <sd20163818@snu.ac.kr>",
+                "<i:queryDB> <i:targetDB> <i:alignmentDB> <o:alignmentDB>",
+                CITATION_MMSEQS2, {{"queryDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"alignmentDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::alignmentDb },
+                                          {"fwbwAlignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
         {"alignbykmer",         alignbykmer,           &par.alignbykmer,          COMMAND_ALIGNMENT,
                 "Heuristic gapped local k-mer based alignment",
                 NULL,
@@ -652,7 +718,6 @@ std::vector<Command> baseCommands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"alignmentDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::alignmentDb }}},
-
 
 
         {"clust",                clust,                &par.clust,                COMMAND_CLUSTER,
@@ -736,14 +801,18 @@ std::vector<Command> baseCommands = {
                 "<i:DB> <o:outDir>",
                 CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL },
                                           {"outDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory }}},
-        {"touchdb",              touchdb,              &par.onlythreads,          COMMAND_STORAGE,
+        {"touchdb",              touchdb,              &par.touchdb,          COMMAND_STORAGE,
                 "Preload DB into memory (page cache)",
                 NULL,
                 "Martin Steinegger <martin.steinegger@snu.ac.kr> ",
                 "<i:DB>",
                 CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
-
-
+        {"gpuserver",              gpuserver,              &par.gpuserver,          COMMAND_STORAGE,
+                "Start a GPU server",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de> & Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:DB>",
+                CITATION_GPU, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
         {"createsubdb",          createsubdb,          &par.createsubdb,          COMMAND_SET,
                 "Create a subset of a DB from list of DB keys",
                 "# Create a new sequenceDB from sequenceDB entries with keys 1, 2 and 3\n"
@@ -761,7 +830,7 @@ std::vector<Command> baseCommands = {
 //                "If exist, the auxillary files: _mapping, source and lookup are also concatenated after IDs update of the 2nd DB",
                 "# Download two sequences databases and concat them\n"
                 "mmseqs databases PDB pdbDB tmp\n"
-                "mmseqs UniProtKB/Swiss-Prot swissprotDB tmp\n"
+                "mmseqs databases UniProtKB/Swiss-Prot swissprotDB tmp\n"
                 "# Works only single threaded since seq. and header DB need the same ordering\n"
                 "mmseqs concatdbs pdbDB swissprotDB pdbAndSwissprotDB --threads 1\n"
                 "mmseqs concatdbs pdbDB_h swissprotDB_h pdbAndSwissprotDB_h --threads 1\n",
@@ -793,8 +862,13 @@ std::vector<Command> baseCommands = {
                 CITATION_MMSEQS2, {{"resultDBLeft", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"resultDBRight", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
                                           {"resultDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::resultDb }}},
-
-
+        {"setextendeddbtype",                 setextendeddbtype,                 &par.extendeddbtype,                 COMMAND_DB,
+                "Write an extended DB ",
+                "# Print entries with keys 1, 2 and 3 from a sequence DB to stdout\n"
+                "mmseqs setextendedbtype db --extended-dbtype 2\n",
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:DB>",
+                CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb }}},
 
         {"view",                 view,                 &par.view,                 COMMAND_DB,
                 "Print DB entries given in --id-list to stdout",
@@ -887,6 +961,14 @@ std::vector<Command> baseCommands = {
                 "Eli Levy Karin <eli.levy.karin@gmail.com> ",
                 "<i:contigsSequenceDB> <i:extractedOrfsHeadersDB> <o:orfsAlignedToContigDB>",
                 CITATION_MMSEQS2, {{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
+        {"recoverlongestorf",    recoverlongestorf,    &par.onlythreads,          COMMAND_EXPERT,
+                "Recover longest ORF for taxonomy annotation after elimination",
+                NULL,
+                "Sung-eun Jang",
+                "<i:orfDB> <i:resultDB> <o:tsvFile>",
+                CITATION_MMSEQS2, {{"orfDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb},
+                                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb},
+                                                           {"tsvFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile}}},
         {"reverseseq",          reverseseq,            &par.reverseseq,           COMMAND_SEQUENCE,
                 "Reverse (without complement) sequences",
                 NULL,
@@ -979,6 +1061,13 @@ std::vector<Command> baseCommands = {
                                           {"targetDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                           {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::allDb },
                                           {"statsDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::genericDb }}},
+        {"filtera3m",            filtera3m,            &par.filtera3m,            COMMAND_HIDDEN,
+                "DB filtering by given conditions",
+                "",
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:a3mFile> <o:a3mFile>",
+                CITATION_MMSEQS2, {{"a3mFile", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfileAndStdin },
+                                          {"a3mFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
         {"filterresult",         filterresult,         &par.filterresult,         COMMAND_RESULT,
                 "Pairwise alignment result filter",
                 NULL,
@@ -1087,6 +1176,13 @@ std::vector<Command> baseCommands = {
                 "<i:profileDB> <o:pssmFile>",
                 CITATION_MMSEQS2, {{"profileDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::profileDb },
                                                            {"pssmFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::genericDb }}},
+        {"profile2neff",         profile2neff,         &par.profile2neff,         COMMAND_PROFILE,
+                "Convert a profile DB to a tab-separated list of Neff scores",
+                NULL,
+                "Johannes Spies <johannes.spies@tum.de>",
+                "<I:profileDB> <o:neffFile>",
+                CITATION_MMSEQS2, {{"profileDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::profileDb },
+                                          {"neffFile", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::genericDb }}},
         {"profile2consensus",    profile2consensus,    &par.profile2seq,          COMMAND_PROFILE,
                 "Extract consensus sequence DB from a profile DB",
                 NULL,
@@ -1108,7 +1204,7 @@ std::vector<Command> baseCommands = {
                 "<i:hhsuiteHHMDB> <o:profileDB>",
                 CITATION_MMSEQS2,{{"",DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL}}},
 
-        {"tsv2exprofiledb",      tsv2exprofiledb,      &par.onlyverbosity,        COMMAND_PROFILE_PROFILE,
+        {"tsv2exprofiledb",      tsv2exprofiledb,      &par.tsv2exprofiledb,      COMMAND_PROFILE_PROFILE,
                 "Create a expandable profile db from TSV files",
                 NULL,
                 "Milot Mirdita <milot@mirdita.de>",
@@ -1200,6 +1296,13 @@ std::vector<Command> baseCommands = {
                 "<i:uniprotkb.dat[.gz]> ... <i:uniprotkb.dat[.gz]> <o:uniprotkbDB>",
                 CITATION_MMSEQS2, {{"DB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &DbValidator::flatfile },
                                                            {"DB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::genericDb }}},
+        {"convertblastdb",       convertblastdb,       &par.onlythreads,          COMMAND_SPECIAL,
+                "Convert BLAST database to a sequence DB",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:blastdb> <o:sequenceDB>",
+                CITATION_MMSEQS2, {{"blastDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, NULL },
+                                                           {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
         {"summarizeheaders",     summarizeheaders,     &par.summarizeheaders,     COMMAND_SPECIAL,
                 "Summarize FASTA headers of result DB",
                 NULL,
@@ -1231,9 +1334,20 @@ std::vector<Command> baseCommands = {
                 "Martin Steinegger <martin.steinegger@snu.ac.kr>",
                 "<i:sequenceDB> ",
                 CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
-
-
-
+        {"calculatelambda",     calculatelambda,       &par.onlyverbosity,        COMMAND_HIDDEN,
+                "Calculate substitution matrix lambda and background probs",
+                NULL,
+                "Milot Mirdita <milot@mirdita.de>",
+                "<i:subMat> ",
+                CITATION_MMSEQS2, {{"subMat", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::flatfile }}},
+        {"createclusearchdb",           createclusearchdb,             &par.createclusearchdb,            COMMAND_HIDDEN,
+                "Separates a sequence DB into a representative and a non-representative DB",
+                NULL,
+                "Martin Steinegger <martin.steinegger@snu.ac.kr>",
+                "<i:sequenceDB> <i:resultDB> <o:sequenceDB>",
+                CITATION_MMSEQS2, {{"sequenceDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
+                                          {"resultDB", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA, &DbValidator::resultDb },
+                                          {"sequenceDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb }}},
         {"dbtype",              dbtype,                &par.empty,                COMMAND_HIDDEN,
                 "",
                 NULL,

@@ -292,7 +292,7 @@ void Alignment::run(const std::string &outDB, const std::string &outDBIndex, con
 
             std::vector<Matcher::result_t> swResults;
             swResults.reserve(300);
-            Matcher matcher(querySeqType, targetSeqType, maxMatcherSeqLen, m, &evaluer, compBiasCorrection, compBiasCorrectionScale, gapOpen, gapExtend, correlationScoreWeight, zdrop);
+            Matcher matcher(querySeqType, maxMatcherSeqLen, m, &evaluer, compBiasCorrection, compBiasCorrectionScale, gapOpen, gapExtend, correlationScoreWeight, zdrop);
 
             std::vector<Matcher::result_t> swRealignResults;
             Matcher *realigner = NULL;
@@ -300,7 +300,7 @@ void Alignment::run(const std::string &outDB, const std::string &outDBIndex, con
                 swRealignResults.reserve(300);
                 realigner = &matcher;
                 if (realign_m != NULL) {
-                    realigner = new Matcher(querySeqType, targetSeqType, maxMatcherSeqLen, realign_m, &evaluer, compBiasCorrection, compBiasCorrectionScale, gapOpen, gapExtend, 0.0, zdrop);
+                    realigner = new Matcher(querySeqType, maxMatcherSeqLen, realign_m, &evaluer, compBiasCorrection, compBiasCorrectionScale, gapOpen, gapExtend, 0.0, zdrop);
                 }
             }
 
@@ -419,7 +419,7 @@ void Alignment::run(const std::string &outDB, const std::string &outDBIndex, con
 
                         // recompute alignment boundaries (without changing evalue)
                         const bool isIdentity = (queryDbKey == swResults[result].dbKey && (includeIdentity || sameQTDB)) ? true : false;
-                        Matcher::result_t res = realigner->getSWResult(&dbSeq, INT_MAX, false, realignCov, covThr, FLT_MAX, realignSwMode, seqIdMode, isIdentity);
+                        Matcher::result_t res = realigner->getSWResult(&dbSeq, INT_MAX, false, covMode, realignCov, FLT_MAX, realignSwMode, seqIdMode, isIdentity);
 
                         const bool covOK = Util::hasCoverage(realignCov, covMode, res.qcov, res.dbcov);
                         if (covOK == true || isIdentity) {

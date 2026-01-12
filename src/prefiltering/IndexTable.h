@@ -101,6 +101,9 @@ public:
         //idxer->reset();
         while(s->hasNextKmer()){
             const unsigned char * kmer = s->nextKmer();
+            if(s->kmerContainsX()){
+                continue;
+            }
             const std::pair<size_t *, size_t> kmerList = kmerGenerator->generateKmerList(kmer);
 
             //unsigned int kmerIdx = idxer->int2index(kmer, 0, kmerSize);
@@ -261,18 +264,19 @@ public:
 
         size_t entrySize = 0;
         size_t minKmer = 0;
-        size_t emptyKmer = 0;
+        // size_t emptyKmer = 0;
         for (size_t i = 0; i < tableSize; i++) {
             const ptrdiff_t size = offsets[i + 1] - offsets[i];
             minKmer = std::min(minKmer, (size_t) size);
             entrySize += size;
-            if (size == 0) {
-                emptyKmer++;
-            }
+            // if (size == 0) {
+            //     emptyKmer++;
+            // }
             if (((size_t) size) < topElements[top_N - 1].first)
                 continue;
             for (size_t j = 0; j < top_N; j++) {
                 if (topElements[j].first < ((size_t) size)) {
+                    std::move_backward(topElements+j, topElements+top_N-1, topElements+top_N);
                     topElements[j].first = static_cast<unsigned long>(size);
                     topElements[j].second = i;
                     break;
@@ -302,6 +306,9 @@ public:
         size_t kmerPos = 0;
         while(s->hasNextKmer()){
             const unsigned char * kmer = s->nextKmer();
+            if(s->kmerContainsX()){
+                continue;
+            }
             std::pair<size_t *, size_t> scoreMatrix = kmerGenerator->generateKmerList(kmer);
             if(kmerPos+scoreMatrix.second >= bufferSize){
                 *buffer = static_cast<IndexEntryLocalTmp*>(realloc(*buffer, sizeof(IndexEntryLocalTmp) * bufferSize*2));

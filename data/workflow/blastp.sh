@@ -5,6 +5,33 @@ fail() {
     exit 1
 }
 
+abspath() {
+    if [ -d "$1" ]; then
+        (cd "$1"; pwd)
+    elif [ -f "$1" ]; then
+        if [ -z "${1##*/*}" ]; then
+            echo "$(cd "${1%/*}"; pwd)/${1##*/}"
+        else
+            echo "$(pwd)/$1"
+        fi
+    elif [ -d "$(dirname "$1")" ]; then
+        echo "$(cd "$(dirname "$1")"; pwd)/$(basename "$1")"
+    fi
+}
+
+fake_pref() {
+    QDB="$1"
+    TDB="$2"
+    RES="$3"
+    # create link to data file which contains a list of all targets that should be aligned
+    ln -s "$(abspath "${TDB}.index")" "${RES}"
+    # create new index repeatedly pointing to same entry
+    INDEX_SIZE="$(wc -c < "${TDB}.index")"
+    awk -v size="$INDEX_SIZE" '{ print $1"\t0\t"size; }' "${QDB}.index" > "${RES}.index"
+    # create dbtype (7)
+    awk 'BEGIN { printf("%c%c%c%c",7,0,0,0); exit; }' > "${RES}.dbtype"
+}
+
 notExists() {
 	[ ! -f "$1" ]
 }
@@ -27,19 +54,37 @@ ALN_RES_MERGE="$TMP_PATH/aln_0"
 while [ "$STEP" -lt "$STEPS" ]; do
     SENS_PARAM=SENSE_${STEP}
     eval SENS="\$$SENS_PARAM"
-    # call prefilter module
+
+    # 1. Prefilter hits
     if notExists "$TMP_PATH/pref_$STEP.dbtype"; then
-        # shellcheck disable=SC2086
-        $RUNNER "$MMSEQS" prefilter "$INPUT" "$TARGET" "$TMP_PATH/pref_$STEP" $PREFILTER_PAR -s "$SENS" \
-            || fail "Prefilter died"
+      if [ "$PREFMODE" = "EXHAUSTIVE" ]; then
+          fake_pref "${INPUT}" "${TARGET}" "$TMP_PATH/pref_$STEP"
+      elif [ "$PREFMODE" = "UNGAPPED" ]; then
+          # shellcheck disable=SC2086
+          $RUNNER "$MMSEQS" ungappedprefilter "$INPUT" "$TARGET" "$TMP_PATH/pref_$STEP" $UNGAPPEDPREFILTER_PAR \
+              || fail "Ungapped prefilter died"
+      elif [ "$PREFMODE" = "UNGAPPED_AND_GAPPED" ]; then
+          :
+      else
+          # shellcheck disable=SC2086
+          $RUNNER "$MMSEQS" prefilter "$INPUT" "$TARGET" "$TMP_PATH/pref_$STEP" $PREFILTER_PAR -s "$SENS" \
+              || fail "Prefilter died"
+      fi
     fi
 
-    # call alignment module
+    # 2. alignment module
     if [ "$STEPS" -eq 1 ]; then
         if notExists "$3.dbtype"; then
-            # shellcheck disable=SC2086
-            $RUNNER "$MMSEQS" "${ALIGN_MODULE}" "$INPUT" "$TARGET${ALIGNMENT_DB_EXT}" "$TMP_PATH/pref_$STEP" "$3" $ALIGNMENT_PAR  \
-                || fail "Alignment died"
+            if [ "$PREFMODE" = "UNGAPPED_AND_GAPPED" ]; then
+              # The GPU based ungapped prefilter als generate alignments
+              # shellcheck disable=SC2086
+              $RUNNER "$MMSEQS" ungappedprefilter "$INPUT" "$TARGET" "$3" $UNGAPPEDPREFILTER_PAR  \
+                  || fail "Alignment died"
+            else
+              # shellcheck disable=SC2086
+              $RUNNER "$MMSEQS" "${ALIGN_MODULE}" "$INPUT" "$TARGET${ALIGNMENT_DB_EXT}" "$TMP_PATH/pref_$STEP" "$3" $ALIGNMENT_PAR  \
+                  || fail "Alignment died"
+            fi
         fi
         break
     else
