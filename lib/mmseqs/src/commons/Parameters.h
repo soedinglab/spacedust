@@ -10,6 +10,7 @@
 #include <typeinfo>
 #include <cstddef>
 #include <utility>
+#include <cstdint>
 
 #include "Command.h"
 #include "MultiParam.h"
@@ -37,6 +38,7 @@ struct MMseqsParameter {
     static const unsigned int COMMAND_CLUSTLINEAR = 64;
     static const unsigned int COMMAND_EXPERT = 128;
     static const unsigned int COMMAND_HIDDEN = 256;
+    static const unsigned int COMMAND_CLUSTPROTEOME= 512;
 
 
     MMseqsParameter(int uid, const char * n, const char *display,
@@ -58,6 +60,8 @@ struct MMseqsParameter {
     }
 };
 
+void initParameterSingleton(void);
+#define DEFAULT_PARAMETER_SINGLETON_INIT void initParameterSingleton() { new Parameters; }
 
 class Parameters {
 public:
@@ -87,6 +91,8 @@ public:
     static const unsigned int DBTYPE_EXTENDED_COMPRESSED = 1;
     static const unsigned int DBTYPE_EXTENDED_INDEX_NEED_SRC = 2;
     static const unsigned int DBTYPE_EXTENDED_CONTEXT_PSEUDO_COUNTS = 4;
+    static const unsigned int DBTYPE_EXTENDED_GPU = 8;
+    static const unsigned int DBTYPE_EXTENDED_SET = 16;
 
     // don't forget to add new database types to DBReader::getDbTypeName and Parameters::PARAM_OUTPUT_DBTYPE
 
@@ -181,10 +187,14 @@ public:
     static const int OUTFMT_TORFSTART = 37;
     static const int OUTFMT_TORFEND = 38;
     static const int OUTFMT_FIDENT = 39;
+    static const int OUTFMT_PPOS = 40;
 
     static const int INDEX_SUBSET_NORMAL = 0;
     static const int INDEX_SUBSET_NO_HEADERS = 1;
     static const int INDEX_SUBSET_NO_PREFILTER = 2;
+    static const int INDEX_SUBSET_NO_ALIGNMENT = 4;
+    static const int INDEX_SUBSET_NO_SEQUENCE_LOOKUP = 8;
+
 
     static std::vector<int> getOutputFormat(int formatMode, const std::string &outformat, bool &needSequences, bool &needBacktrace, bool &needFullHeaders,
                                             bool &needLookup, bool &needSource, bool &needTaxonomyMapping, bool &needTaxonomy);
@@ -212,6 +222,18 @@ public:
     static const int AGG_TAX_UNIFORM = 0;
     static const int AGG_TAX_MINUS_LOG_EVAL = 1;
     static const int AGG_TAX_SCORE = 2;
+
+    // pairaln dummy mode
+    static const int PAIRALN_DUMMY_MODE_OFF = 0;
+    static const int PAIRALN_DUMMY_MODE_ON = 1;
+
+    // pairaln mode
+    static const int PAIRALN_MODE_ALL_PER_SPECIES = 0;
+    static const int PAIRALN_MODE_COVER_ALL_CHAINS = 1;
+
+    // pairaln filter
+    static const int PAIRALN_FILTER_TOP_HIT = 0;
+    static const int PAIRALN_FILTER_PROXIMITY = 1;
 
     // taxonomy search strategy
     static const int TAXONOMY_SINGLE_SEARCH = 1;
@@ -269,6 +291,7 @@ public:
     // seq. split mode
     static const int SEQUENCE_SPLIT_MODE_HARD = 0;
     static const int SEQUENCE_SPLIT_MODE_SOFT = 1;
+    static const int SEQUENCE_SPLIT_MODE_GPU = 2;
 
     // rescorediagonal
     static const int RESCORE_MODE_HAMMING = 0;
@@ -294,6 +317,12 @@ public:
     static const int ID_MODE_KEYS = 0;
     static const int ID_MODE_LOOKUP = 1;
 
+    // prefilter mode
+    static const int PREF_MODE_KMER = 0;
+    static const int PREF_MODE_UNGAPPED = 1;
+    static const int PREF_MODE_EXHAUSTIVE = 2;
+    static const int PREF_MODE_UNGAPPED_AND_GAPPED = 3;
+
     // unpackdb
     static const int UNPACK_NAME_KEY = 0;
     static const int UNPACK_NAME_ACCESSION = 1;
@@ -301,6 +330,16 @@ public:
     // result direction
     static const int PARAM_RESULT_DIRECTION_QUERY  = 0;
     static const int PARAM_RESULT_DIRECTION_TARGET = 1;
+
+    // translation mode
+    static const int PARAM_TRANSLATION_MODE_ORF = 0;
+    static const int PARAM_TRANSLATION_MODE_FRAME = 1;
+
+    // report mode
+    static const int REPORT_MODE_KRAKEN = 0;
+    static const int REPORT_MODE_KRONA = 1;
+    static const int REPORT_MODE_SKIP = 2; // for workflows only
+    static const int REPORT_MODE_KRAKENDB = 3;
 
     // path to databases
     std::string db1;
@@ -367,6 +406,9 @@ public:
     size_t maxSeqLen;                    // sequence length
     size_t maxResListLen;                // Maximal result list length per query
     int    verbosity;                    // log level
+    int    gpu;                          // use GPU
+    int    gpuServer;                    // use the gpu server
+    int    gpuServerWaitTimeout;         // wait for this many seconds until GPU server is ready
     int    threads;                      // Amounts of threads
     int    compressed;                   // compressed writer
     bool   removeTmpFiles;               // Do not delete temp files
@@ -375,6 +417,7 @@ public:
     // PREFILTER
     float  sensitivity;                  // target sens
     int    kmerSize;                     // kmer size for the prefilter
+    int targetSearchMode;                // target search mode
     MultiParam<SeqProf<int>> kmerScore;   // kmer score for the prefilter
     MultiParam<NuclAA<int>> alphabetSize; // alphabet size for the prefilter
     int    compBiasCorrection;           // Aminoacid composiont correction
@@ -385,6 +428,7 @@ public:
     int    maskMode;                     // mask low complex areas
     float  maskProb;                     // mask probability
     int    maskLowerCaseMode;            // mask lowercase letters in prefilter and kmermatchers
+    int    maskNrepeats;                 // mask letters that occur at least N times in a row
 
     int    minDiagScoreThr;              // min diagonal score
     int    spacedKmer;                   // Spaced Kmers
@@ -420,7 +464,9 @@ public:
     MultiParam<NuclAA<int>> gapOpen;             // gap open cost
     MultiParam<NuclAA<int>> gapExtend;           // gap extension cost
     float correlationScoreWeight; // correlation score weight
+#ifdef GAP_POS_SCORING
     int    gapPseudoCount;               // for calculation of position-specific gap opening penalties
+#endif
     int    zdrop;                        // zdrop
 
     // workflow
@@ -432,9 +478,12 @@ public:
     int    clusterSteps;
     bool   singleStepClustering;
     int    clusterReassignment;
+    bool    clusteringSetMode;
+    int    clusterModule;
 
     // SEARCH WORKFLOW
     int numIterations;
+    int prefMode;
     float startSens;
     int sensSteps;
     bool exhaustiveSearch;
@@ -444,6 +493,7 @@ public:
     float orfFilterSens;
     double orfFilterEval;
     bool lcaSearch;
+    int translationMode;
 
     // easysearch
     bool greedyBestHits;
@@ -504,6 +554,7 @@ public:
     int pcmode;
     MultiParam<PseudoCounts> pca;
     MultiParam<PseudoCounts> pcb;
+    int profileOutputMode;
 
     // sequence2profile
     float neff;
@@ -534,6 +585,7 @@ public:
     int checkCompatible;
     int searchType;
     int indexSubset;
+    std::string indexDbsuffix;
 
     // createdb
     int identifierOffset;
@@ -552,6 +604,9 @@ public:
 
     // result2flat
     bool useHeader;
+
+    // createclusearchdb
+    std::string dbSuffixList;
 
     // gff2db
     std::string gffType;
@@ -594,6 +649,9 @@ public:
     // summarizetabs
     float overlap;
     int msaType;
+
+    // setextendeddbtype
+    int extendedDbtype;
 
     // extractalignedregion
     int extractMode;
@@ -642,6 +700,12 @@ public:
     float majorityThr;
     int voteMode;
 
+    // pairaln
+    int pairdummymode;
+    int pairmode;
+    int pairfilter;
+    int pairProximityDistance;
+
     // taxonomyreport
     int reportMode;
 
@@ -670,6 +734,30 @@ public:
     // unpackdb
     std::string unpackSuffix;
     int unpackNameMode;
+    
+    // fwbw
+    float mact;
+    float fwbwGapopen;
+    float fwbwGapextend;
+    float temperature;
+    int blocklen;
+    int fwbwBacktraceMode;
+
+    // touchdb
+    bool touchLock;
+
+
+    // proteomecluster
+    std::string  ppsWeightFile;
+    std::string  proteomeWeightFile;
+    float        weightClusterCount;
+    float        proteomeWeightClusterCount;
+    float        proteomeSimThr;      
+    float        proteomeRelativeSimThr;
+    bool         proteomeCascadedClustering;
+    bool         includeAlignFiles;
+    bool         proteomeIncludeAlignFiles;
+    bool         proteomeHiddenReport;
 
     // for modules that should handle -h themselves
     bool help;
@@ -680,13 +768,11 @@ public:
     static Parameters& getInstance()
     {
         if (instance == NULL) {
-            initInstance();
+            initParameterSingleton();
         }
         return *instance;
     }
-    static void initInstance() {
-        new Parameters;
-    }
+    friend void initParameterSingleton(void);
 
     void setDefaults();
     void initMatrices();
@@ -702,6 +788,7 @@ public:
 
     PARAMETER(PARAM_S)
     PARAMETER(PARAM_K)
+    PARAMETER(PARAM_TARGET_SEARCH_MODE)
     PARAMETER(PARAM_THREADS)
     PARAMETER(PARAM_COMPRESSED)
     PARAMETER(PARAM_ALPH_SIZE)
@@ -711,6 +798,7 @@ public:
     PARAMETER(PARAM_MASK_RESIDUES)
     PARAMETER(PARAM_MASK_PROBABILTY)
     PARAMETER(PARAM_MASK_LOWER_CASE)
+    PARAMETER(PARAM_MASK_N_REPEAT)
 
     PARAMETER(PARAM_MIN_DIAG_SCORE)
     PARAMETER(PARAM_K_SCORE)
@@ -732,6 +820,7 @@ public:
     PARAMETER(PARAM_LOCAL_TMP)
     std::vector<MMseqsParameter*> prefilter;
     std::vector<MMseqsParameter*> ungappedprefilter;
+    std::vector<MMseqsParameter*> gappedprefilter;
 
     // alignment
     PARAMETER(PARAM_ALIGNMENT_MODE)
@@ -753,7 +842,9 @@ public:
     PARAMETER(PARAM_ALT_ALIGNMENT)
     PARAMETER(PARAM_GAP_OPEN)
     PARAMETER(PARAM_GAP_EXTEND)
+#ifdef GAP_POS_SCORING
     PARAMETER(PARAM_GAP_PSEUDOCOUNT)
+#endif
     PARAMETER(PARAM_ZDROP)
 
     // clustering
@@ -761,6 +852,8 @@ public:
     PARAMETER(PARAM_CLUSTER_STEPS)
     PARAMETER(PARAM_CASCADED)
     PARAMETER(PARAM_CLUSTER_REASSIGN)
+    PARAMETER(PARAM_CLUSTER_SET_MODE)
+    PARAMETER(PARAM_CLUSTER_MODULE)
 
     // affinity clustering
     PARAMETER(PARAM_MAXITERATIONS)
@@ -769,7 +862,10 @@ public:
     // logging
     PARAMETER(PARAM_V)
     std::vector<MMseqsParameter*> clust;
-
+    // gpu
+    PARAMETER(PARAM_GPU)
+    PARAMETER(PARAM_GPU_SERVER)
+    PARAMETER(PARAM_GPU_SERVER_WAIT_TIMEOUT)
     // format alignment
     PARAMETER(PARAM_FORMAT_MODE)
     PARAMETER(PARAM_FORMAT_OUTPUT)
@@ -808,6 +904,7 @@ public:
     PARAMETER(PARAM_PC_MODE)
     PARAMETER(PARAM_PCA)
     PARAMETER(PARAM_PCB)
+    PARAMETER(PARAM_PROFILE_OUTPUT_MODE)
 
     // sequence2profile
     PARAMETER(PARAM_NEFF)
@@ -842,6 +939,7 @@ public:
     PARAMETER(PARAM_NUM_ITERATIONS)
     PARAMETER(PARAM_START_SENS)
     PARAMETER(PARAM_SENS_STEPS)
+    PARAMETER(PARAM_PREF_MODE)
     PARAMETER(PARAM_EXHAUSTIVE_SEARCH)
     PARAMETER(PARAM_EXHAUSTIVE_SEARCH_FILTER)
     PARAMETER(PARAM_STRAND)
@@ -849,6 +947,7 @@ public:
     PARAMETER(PARAM_ORF_FILTER_S)
     PARAMETER(PARAM_ORF_FILTER_E)
     PARAMETER(PARAM_LCA_SEARCH)
+    PARAMETER(PARAM_TRANSLATION_MODE)
 
     // easysearch
     PARAMETER(PARAM_GREEDY_BEST_HITS)
@@ -870,6 +969,7 @@ public:
     PARAMETER(PARAM_CHECK_COMPATIBLE)
     PARAMETER(PARAM_SEARCH_TYPE)
     PARAMETER(PARAM_INDEX_SUBSET)
+    PARAMETER(PARAM_INDEX_DBSUFFIX)
 
     // createdb
     PARAMETER(PARAM_USE_HEADER) // also used by extractorfs
@@ -882,10 +982,16 @@ public:
     // convert2fasta
     PARAMETER(PARAM_USE_HEADER_FILE)
 
+    // setextendedbtype
+    PARAMETER(PARAM_EXTENDED_DBTYPE)
+
     // split sequence
     PARAMETER(PARAM_SEQUENCE_OVERLAP)
     PARAMETER(PARAM_SEQUENCE_SPLIT_MODE)
     PARAMETER(PARAM_HEADER_SPLIT_MODE)
+
+    // createclusearchdb
+    PARAMETER(PARAM_DB_SUFFIX_LIST)
 
     // gff2db
     PARAMETER(PARAM_GFF_TYPE)
@@ -979,6 +1085,12 @@ public:
     PARAMETER(PARAM_MAJORITY)
     PARAMETER(PARAM_VOTE_MODE)
 
+    // pairaln
+    PARAMETER(PARAM_PAIRING_DUMMY_MODE)
+    PARAMETER(PARAM_PAIRING_MODE)
+    PARAMETER(PARAM_PAIRING_FILTER)
+    PARAMETER(PARAM_PAIRING_PROX_DIST)
+    
     // taxonomyreport
     PARAMETER(PARAM_REPORT_MODE)
 
@@ -1007,6 +1119,30 @@ public:
     // unpackdb
     PARAMETER(PARAM_UNPACK_SUFFIX)
     PARAMETER(PARAM_UNPACK_NAME_MODE)
+    
+    // fwbw
+    PARAMETER(PARAM_MACT)
+    PARAMETER(PARAM_FWBW_GAPOPEN)
+    PARAMETER(PARAM_FWBW_GAPEXTEND)
+    PARAMETER(PARAM_TEMPERATURE)
+    PARAMETER(PARAM_BLOCKLEN)
+    PARAMETER(PARAM_FWBW_BACKTRACE_MODE)
+
+    // touchdb
+    PARAMETER(PARAM_TOUCH_LOCK)
+
+
+    // proteomecluster
+    PARAMETER(PARAM_PPS_WEIGHT_FILE)
+    PARAMETER(PARAM_WEIGHT_CLUSTER_COUNT)
+    PARAMETER(PARAM_PROTEOME_SIMILARITY)
+    PARAMETER(PARAM_PROTEOME_RELATIVE_SIMILARITY)
+    PARAMETER(PARAM_PROTEOME_CASCADED_CLUSTERING)
+    PARAMETER(PARAM_INCLUDE_ALIGN_FILES)
+    PARAMETER(PARAM_PROTEOME_WEIGHT_FILE)
+    PARAMETER(PARAM_PROTEOME_WEIGHT_CLUSTER_COUNT)
+    PARAMETER(PARAM_PROTEOME_INCLUDE_ALIGN_FILES)
+    PARAMETER(PARAM_PROTEOME_HIDDEN_REPORT)
 
     // for modules that should handle -h themselves
     PARAMETER(PARAM_HELP)
@@ -1039,6 +1175,7 @@ public:
     std::vector<MMseqsParameter*> result2profile;
     std::vector<MMseqsParameter*> result2msa;
     std::vector<MMseqsParameter*> result2dnamsa;
+    std::vector<MMseqsParameter*> filtera3m;
     std::vector<MMseqsParameter*> filterresult;
     std::vector<MMseqsParameter*> convertmsa;
     std::vector<MMseqsParameter*> msa2profile;
@@ -1057,6 +1194,7 @@ public:
     std::vector<MMseqsParameter*> createlinindex;
     std::vector<MMseqsParameter*> convertalignments;
     std::vector<MMseqsParameter*> createdb;
+    std::vector<MMseqsParameter*> makepaddedseqdb;
     std::vector<MMseqsParameter*> convert2fasta;
     std::vector<MMseqsParameter*> result2flat;
     std::vector<MMseqsParameter*> result2repseq;
@@ -1086,6 +1224,7 @@ public:
     std::vector<MMseqsParameter*> offsetalignment;
     std::vector<MMseqsParameter*> proteinaln2nucl;
     std::vector<MMseqsParameter*> subtractdbs;
+    std::vector<MMseqsParameter*> extendeddbtype;
     std::vector<MMseqsParameter*> diff;
     std::vector<MMseqsParameter*> concatdbs;
     std::vector<MMseqsParameter*> mergedbs;
@@ -1094,6 +1233,7 @@ public:
     std::vector<MMseqsParameter*> summarizeresult;
     std::vector<MMseqsParameter*> summarizetabs;
     std::vector<MMseqsParameter*> extractdomains;
+    std::vector<MMseqsParameter*> createclusearchdb;
     std::vector<MMseqsParameter*> extractalignedregion;
     std::vector<MMseqsParameter*> convertkb;
     std::vector<MMseqsParameter*> tsv2db;
@@ -1111,9 +1251,11 @@ public:
     std::vector<MMseqsParameter*> renamedbkeys;
     std::vector<MMseqsParameter*> createtaxdb;
     std::vector<MMseqsParameter*> profile2pssm;
+    std::vector<MMseqsParameter*> profile2neff;
     std::vector<MMseqsParameter*> profile2seq;
     std::vector<MMseqsParameter*> besthitbyset;
     std::vector<MMseqsParameter*> combinepvalbyset;
+    std::vector<MMseqsParameter*> mergeresultsbyset;
     std::vector<MMseqsParameter*> multihitdb;
     std::vector<MMseqsParameter*> multihitsearch;
     std::vector<MMseqsParameter*> expandaln;
@@ -1125,6 +1267,12 @@ public:
     std::vector<MMseqsParameter*> tar2db;
     std::vector<MMseqsParameter*> unpackdbs;
     std::vector<MMseqsParameter*> appenddbtoindex;
+    std::vector<MMseqsParameter*> touchdb;
+    std::vector<MMseqsParameter*> gpuserver;
+    std::vector<MMseqsParameter*> tsv2exprofiledb;
+    std::vector<MMseqsParameter*> fwbw;
+    std::vector<MMseqsParameter*> proteomecluster;
+    std::vector<MMseqsParameter*> easyproteomeclusterworkflow;
 
     std::vector<MMseqsParameter*> combineList(const std::vector<MMseqsParameter*> &par1,
                                              const std::vector<MMseqsParameter*> &par2);

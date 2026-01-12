@@ -87,7 +87,7 @@ void ContextLibrary::readContextProfile(std::stringstream &in, LibraryReader &re
     size_t nalph = reader.ReadInt(line.c_str(), "ALPH", "Unable to parse CRF state 'ALPH'!");
     if (nalph != 20){
         Debug(Debug::ERROR) << "Alphabet size of serialized CRF state should be 20 "
-                "but is acutally" << nalph << "!\n";
+                "but is actually" << nalph << "!\n";
         EXIT(EXIT_FAILURE);
     }
     // If everything went fine we can resize our data memmbers
@@ -135,12 +135,12 @@ void ContextLibrary::readContextProfile(std::stringstream &in, LibraryReader &re
     }
     // Calculate maximum of pseudocount weights
     double max = -DBL_MAX;
-    double mean = 0.0;
+    // double mean = 0.0;
     for (size_t a = 0; a < 20; ++a) {
-        mean += pc_weight[a];
+        // mean += pc_weight[a];
         if (pc_weight[a] > max) max = pc_weight[a];
     }
-    mean /= 20.0;
+    // mean /= 20.0;
 
     // Rescale pseudocount weights and calculate their sum in lin-space
     long double sum = 0.0;

@@ -21,6 +21,9 @@
 #include <sys/mman.h>
 #include <fstream>      // std::ifstream
 
+#define FMT_HEADER_ONLY 1
+#include <fmt/fmt/core.h>
+
 #ifdef OPENMP
 #include <omp.h>
 #endif
@@ -436,8 +439,7 @@ int Util::omp_thread_count() {
     n += 1;
     return n;
 }
-
-std::map<unsigned int, std::string> Util::readLookup(const std::string& file, const bool removeSplit) {
+std::map<unsigned int, std::string> Util::readLookup(const std::string& file, const unsigned char removeSplit) {
     std::map<unsigned int, std::string> mapping;
     if (file.length() > 0) {
         std::ifstream mappingStream(file);
@@ -453,9 +455,20 @@ std::map<unsigned int, std::string> Util::readLookup(const std::string& file, co
 
             std::string& name = split[1];
 
-            size_t pos;
-            if (removeSplit && (pos = name.find_last_of('_')) != std::string::npos) {
-                name = name.substr(0, pos);
+            switch (removeSplit) {
+                case 1: { // Underscore
+                    size_t pos = name.find_last_of('_');
+                    if (pos != std::string::npos) name = name.substr(0, pos);
+                    break;
+                }
+                case 2: { // Dot
+                    size_t pos = name.find_last_of('.');
+                    if (pos != std::string::npos) name = name.substr(0, pos);
+                    break;
+                }
+                case 0: // None
+                default:
+                    break;
             }
 
             mapping.emplace(id, name);
@@ -464,7 +477,6 @@ std::map<unsigned int, std::string> Util::readLookup(const std::string& file, co
 
     return mapping;
 }
-
 
 std::string Util::removeWhiteSpace(std::string in) {
     in.erase(std::remove_if(in.begin(), in.end(), isspace), in.end());
@@ -653,14 +665,20 @@ std::string SSTR(unsigned long long x) {
 
 template<>
 std::string SSTR(double x) {
-    char buffer[32];
-    int n = sprintf(buffer, "%.3E", x);
-    return std::string(buffer, n);
+    return fmt::format("{:.3E}", x);
+}
+
+template<>
+std::string SSTR(double x, int precision) {
+    return fmt::format("{:.{}E}", x, precision);
 }
 
 template<>
 std::string SSTR(float x) {
-    char buffer[32];
-    int n = sprintf(buffer, "%.3f", x);
-    return std::string(buffer, n);
+    return fmt::format("{:.3f}", x);
+}
+
+template<>
+std::string SSTR(float x, int precision) {
+    return fmt::format("{:.{}f}", x, precision);
 }

@@ -90,11 +90,13 @@ private:
     int maskMode;
     int maskLowerCaseMode;
     float maskProb;
+    int maskNrepeats;
     int splitMode;
     int kmerThr;
     MultiParam<NuclAA<std::string>> scoringMatrixFile;
     MultiParam<NuclAA<std::string>> seedScoringMatrixFile;
     int targetSeqType;
+    int targetSearchMode;
     bool takeOnlyBestKmer;
     size_t maxResListLen;
 

@@ -28,7 +28,7 @@ public:
                                                         const int N,
                                                         size_t alphabetSize);
     static void calcProfileProfileLocalAaBiasCorrectionAln(int8_t *profileScores,
-                                                           int N,
+                                                           unsigned int N,
                                                            size_t alphabetSize,
                                                            BaseMatrix *subMat);
     static void calcGlobalAaBiasCorrection(const BaseMatrix * m,
@@ -71,6 +71,8 @@ public:
                           asciiStart);
     }
 
+    // hack to support calculatelambda
+    static bool printLambdaAndBackground;
 private:
     int parseAlphabet(char * word, char * num2aa, int * aa2num);
 

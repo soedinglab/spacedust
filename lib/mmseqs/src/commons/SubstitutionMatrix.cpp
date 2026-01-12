@@ -1,8 +1,7 @@
 #include "SubstitutionMatrix.h"
 #include "Util.h"
 #include "Debug.h"
-#include "lambda_calculator.h"
-
+#include "LambdaCalculation.h"
 
 #include <cstring>
 #include <algorithm>
@@ -58,30 +57,18 @@ SubstitutionMatrix::SubstitutionMatrix(const char *filename, float bitFactor, fl
 }
 
 
-bool SubstitutionMatrix::estimateLambdaAndBackground(const double **scoreMatrix,
-                                                     int alphabetSize, double *pBack, double &lambda) {
-    // We need to pass the parameters as 1-based pointers, hence the +1s and -1s.
-    std::vector<double> cells(alphabetSize * (alphabetSize + 1));
-    std::vector<const double *> pointers(alphabetSize + 1);
-
-    for (int i = 0; i < alphabetSize; ++i) {
-        pointers[i + 1] = &cells[i * alphabetSize];
-        for (int j = 0; j < alphabetSize; ++j) {
-            cells[i * alphabetSize + j + 1] = scoreMatrix[i][j];
-        }
-    }
-
+bool SubstitutionMatrix::estimateLambdaAndBackground(
+    const double** scoreMatrix,
+    int alphabetSize,
+    double* pBack,
+    double& lambda
+) {
     std::vector<double> letterProbs1(alphabetSize, 0);
     std::vector<double> letterProbs2(alphabetSize, 0);
-
-    lambda = calculate_lambda(&pointers[0], alphabetSize,
-                              &letterProbs1[0] - 1,
-                              &letterProbs2[0] - 1);
-
+    lambda = calculate_lambda(scoreMatrix, alphabetSize, letterProbs1, letterProbs2);
     for (int i = 0; i < alphabetSize; i++) {
         pBack[i] = letterProbs1[i];
     }
-
     if (lambda < 0)
         return false; //bad
     else
@@ -166,7 +153,7 @@ void SubstitutionMatrix::calcProfileProfileLocalAaBiasCorrection(short *profileS
 }
 
 void SubstitutionMatrix::calcProfileProfileLocalAaBiasCorrectionAln(int8_t *profileScores,
-                                                                    int N, size_t alphabetSize, BaseMatrix *subMat) {
+                                                                    unsigned int N, size_t alphabetSize, BaseMatrix *subMat) {
 
     const int windowSize = 40;
 
@@ -176,32 +163,33 @@ void SubstitutionMatrix::calcProfileProfileLocalAaBiasCorrectionAln(int8_t *prof
 
     ProfileStates ps(alphabetSize,subMat->pBack);
 
-    for (int pos = 0; pos < N; pos++) {
+    for (unsigned int pos = 0; pos < N; pos++) {
         for(size_t aa = 0; aa < alphabetSize; aa++) {
             pnul[pos] += *(profileScores + pos + N*aa) * ps.prior[aa];
         }
     }
 
-    for (int i = 0; i < N; i++){
-        const int minPos = std::max(0, (i - windowSize/2));
-        const int maxPos = std::min(N, (i + windowSize/2));
+    for (unsigned int i = 0; i < N; i++){
+        const int minPos = std::max(0, ((int)i - windowSize/2));
+        const unsigned int maxPos = std::min(N, (i + windowSize/2));
         const int windowLength = maxPos - minPos;
         // negative score for the amino acids in the neighborhood of i
         memset(aaSum, 0, sizeof(float) * alphabetSize);
 
-        for (int j = minPos; j < maxPos; j++){
-            if( i == j )
+        for (unsigned int j = minPos; j < maxPos; j++){
+            if (i == j) {
                 continue;
-            for(size_t aa = 0; aa < alphabetSize; aa++){
+            }
+            for (size_t aa = 0; aa < alphabetSize; aa++) {
                 aaSum[aa] += *(profileScores + aa*N + j) - pnul[j];
             }
         }
-        for(size_t aa = 0; aa < alphabetSize; aa++) {
+        for (size_t aa = 0; aa < alphabetSize; aa++) {
             profileScores[i + aa*N] = static_cast<int8_t>(*(profileScores + i + N*aa) - aaSum[aa]/windowLength);
         }
     }
-    delete [] aaSum;
-    delete [] pnul;
+    delete[] aaSum;
+    delete[] pnul;
 }
 
 
@@ -335,6 +323,7 @@ int SubstitutionMatrix::parseAlphabet(char *word, char *num2aa, int *aa2num) {
     return minAAInt;
 }
 
+bool SubstitutionMatrix::printLambdaAndBackground = false;
 void SubstitutionMatrix::readProbMatrix(const std::string &matrixData, const bool containsX) {
     std::stringstream in(matrixData);
     std::string line;
@@ -401,7 +390,17 @@ void SubstitutionMatrix::readProbMatrix(const std::string &matrixData, const boo
             Debug(Debug::ERROR) << "Computing inverse of substitution matrix failed\n";
             EXIT(EXIT_FAILURE);
         }
-        pBack[static_cast<int>(aa2num[static_cast<int>('X')])]=ANY_BACK;
+
+        pBack[static_cast<int>(aa2num[static_cast<int>('X')])] = ANY_BACK;
+
+        if (printLambdaAndBackground) {
+            Debug(Debug::INFO) << "# Background (precomputed optional):";
+            for (int i = 0; i < alphabetSize; ++i) {
+                Debug(Debug::INFO) << " " << SSTR((float)pBack[i], 5);
+            }
+            Debug(Debug::INFO) << "\n";
+            Debug(Debug::INFO) << "# Lambda     (precomputed optional): " << SSTR((float)lambda, 5) << "\n";
+        }
     }
     if(xIsPositive == false){
         for (int i = 0; i < alphabetSize - 1; i++) {

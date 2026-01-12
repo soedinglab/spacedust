@@ -40,18 +40,41 @@ downloadFile() {
         ARIA)
             FILENAME=$(basename "${OUTPUT}")
             DIR=$(dirname "${OUTPUT}")
-            aria2c --max-connection-per-server="$ARIA_NUM_CONN" --allow-overwrite=true -o "$FILENAME" -d "$DIR" "$URL" && return 0
+            if aria2c -c --max-connection-per-server="$ARIA_NUM_CONN" --allow-overwrite=true -o "${FILENAME}.aria2" -d "$DIR" "$URL"; then
+                mv -f -- "${OUTPUT}.aria2" "${OUTPUT}"
+                return 0
+            fi
             ;;
         CURL)
-            curl -L -o "$OUTPUT" "$URL" && return 0
+            if curl -L -C - -o "${OUTPUT}.curl" "$URL"; then
+                mv -f -- "${OUTPUT}.curl" "${OUTPUT}"
+                return 0
+            fi
             ;;
         WGET)
-            wget -O "$OUTPUT" "$URL" && return 0
+            if wget -O "${OUTPUT}.wget" -c "$URL"; then
+                mv -f -- "${OUTPUT}.wget" "${OUTPUT}"
+                return 0
+            fi
             ;;
         esac
     done
     set -e
     fail "Could not download $URL to $OUTPUT"
+}
+
+downloadExtractBlastTars() {
+    META_JSON="$1"
+    OUTPUT="$2"
+    ( downloadFile "${META_JSON}" "${OUTPUT}/version" )
+    grep -F ".tar.gz" "${OUTPUT}/version" | cut -f2 -d\" | sed 's|^ftp:|https:|g' > "${OUTPUT}/tar_files.txt"
+    while IFS= read -r URL; do
+        FILENAME=$(basename "${URL}")
+        ( downloadFile "${URL}" "${OUTPUT}/${FILENAME}" )
+        tar -C "${OUTPUT}" -xzf "${OUTPUT}/${FILENAME}"
+        rm -f -- "${OUTPUT}/${FILENAME}"
+    done < "${OUTPUT}/tar_files.txt"
+    rm -f -- "${OUTPUT}/tar_files.txt"
 }
 
 # check number of input variables
@@ -115,28 +138,36 @@ case "${SELECTION}" in
         INPUT_TYPE="FASTA_LIST"
     ;;
     "NR")
-        if notExists "${TMP_PATH}/nr.gz"; then
-            date "+%s" > "${TMP_PATH}/version"
-            downloadFile "https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz" "${TMP_PATH}/nr.gz"
-            downloadFile "https://ftp.ncbi.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.gz" "${TMP_PATH}/prot.accession2taxid.gz"
-            gunzip "${TMP_PATH}/prot.accession2taxid.gz"
-            downloadFile "https://ftp.ncbi.nih.gov/pub/taxonomy/accession2taxid/pdb.accession2taxid.gz" "${TMP_PATH}/pdb.accession2taxid.gz"
-            gunzip "${TMP_PATH}/pdb.accession2taxid.gz"
+        if notExists "${TMP_PATH}/nr.pal"; then
+            downloadExtractBlastTars "https://ftp.ncbi.nlm.nih.gov/blast/db/nr-prot-metadata.json" "${TMP_PATH}"
         fi
-        push_back "${TMP_PATH}/nr.gz"
-        INPUT_TYPE="FASTA_LIST"
+        push_back "${TMP_PATH}/nr"
+        INPUT_TYPE="BLASTDB"
+    ;;
+    "ClusteredNR")
+        if notExists "${TMP_PATH}/nr_cluster_seq.pal"; then
+            downloadExtractBlastTars "https://ftp.ncbi.nlm.nih.gov/blast/db/experimental/nr_cluster_seq-prot-metadata.json" "${TMP_PATH}"
+        fi
+        push_back "${TMP_PATH}/nr_cluster_seq"
+        INPUT_TYPE="BLASTDB"
     ;;
     "NT")
-        if notExists "${TMP_PATH}/nt.gz"; then
-            date "+%s" > "${TMP_PATH}/version"
-            downloadFile "https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nt.gz" "${TMP_PATH}/nt.gz"
+        if notExists "${TMP_PATH}/nt.nal"; then
+            downloadExtractBlastTars "https://ftp.ncbi.nlm.nih.gov/blast/db/nt-nucl-metadata.json" "${TMP_PATH}"
         fi
-        push_back "${TMP_PATH}/nt.gz"
-        INPUT_TYPE="FASTA_LIST"
+        push_back "${TMP_PATH}/nt"
+        INPUT_TYPE="BLASTDB"
+    ;;
+    "core_nt")
+        if notExists "${TMP_PATH}/core_nt.nal" && notExists "${TMP_PATH}/core_nt.nsq"; then
+            downloadExtractBlastTars "https://ftp.ncbi.nlm.nih.gov/blast/db/core_nt-nucl-metadata.json" "${TMP_PATH}"
+        fi
+        push_back "${TMP_PATH}/core_nt"
+        INPUT_TYPE="BLASTDB"
     ;;
     "GTDB")
         if notExists "${TMP_PATH}/download.done"; then
-            downloadFile "https://data.ace.uq.edu.au/public/gtdb/data/releases/latest/VERSION" "${TMP_PATH}/version"
+            downloadFile "https://data.ace.uq.edu.au/public/gtdb/data/releases/latest/VERSION.txt" "${TMP_PATH}/version"
             downloadFile "https://data.ace.uq.edu.au/public/gtdb/data/releases/latest/genomic_files_reps/gtdb_proteins_aa_reps.tar.gz" "${TMP_PATH}/gtdb.tar.gz"
             downloadFile "https://data.ace.uq.edu.au/public/gtdb/data/releases/latest/bac120_taxonomy.tsv" "${TMP_PATH}/bac120_taxonomy.tsv"
             downloadFile "https://data.ace.uq.edu.au/public/gtdb/data/releases/latest/ar53_taxonomy.tsv" "${TMP_PATH}/ar53_taxonomy.tsv"
@@ -147,7 +178,7 @@ case "${SELECTION}" in
     "PDB")
         if notExists "${TMP_PATH}/pdb_seqres.txt.gz"; then
             date "+%s" > "${TMP_PATH}/version"
-            downloadFile "https://ftp.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt.gz" "${TMP_PATH}/pdb_seqres.txt.gz"
+            downloadFile "https://files.wwpdb.org/pub/pdb/derived_data/pdb_seqres.txt.gz" "${TMP_PATH}/pdb_seqres.txt.gz"
         fi
         push_back "${TMP_PATH}/pdb_seqres.txt.gz"
         INPUT_TYPE="FASTA_LIST"
@@ -156,7 +187,7 @@ case "${SELECTION}" in
         if notExists "${TMP_PATH}/msa.index"; then
             date "+%s" > "${TMP_PATH}/version"
             downloadFile "http://wwwuser.gwdg.de/~compbiol/data/hhsuite/databases/hhsuite_dbs/pdb70_from_mmcif_latest.tar.gz" "${TMP_PATH}/pdb70.tar.gz"
-            tar -xOzf "${TMP_PATH}/pdb70.tar.gz" pdb70_a3m.ffdata | tr -d '\000' | awk -v outfile="${TMP_PATH}/msa" 'function writeEntry() { printf "%s\0", data >> outfile; size = length(data) + 1; data=""; print id"\t"offset"\t"size >> outindex; offset = offset + size; } BEGIN { data = ""; offset = 0; id = 1; if(length(outfile) == 0) { outfile="output"; } outindex = outfile".index"; printf("") > outfile; printf("") > outindex; printf("%c%c%c%c",11,0,0,0) > outfile".dbtype"; } /^>ss_/ { inss = 1; entry = 0; next; } inss == 1 { inss = 0; next; } /^>/ && entry == 0 { if (id > 1) { writeEntry(); } id = id + 1; data = ">"substr($1, 2)"\n"; entry = entry + 1; next; } entry > 0 { data = data""$0"\n"; entry = entry + 1; next; } END { writeEntry(); close(outfile); close(outfile".index"); }'
+            tar -xOzf "${TMP_PATH}/pdb70.tar.gz" pdb70_a3m.ffdata | tr -d '\000' | awk -v outfile="${TMP_PATH}/msa" 'function writeEntry() { printf "%s\0", data >> outfile; size = length(data) + 1; data=""; printf("%s\t%.0f\t%s\n", id, offset, size) >> outindex; offset = offset + size; } BEGIN { data = ""; offset = 0; id = 1; if(length(outfile) == 0) { outfile="output"; } outindex = outfile".index"; printf("") > outfile; printf("") > outindex; printf("%c%c%c%c",11,0,0,0) > outfile".dbtype"; } /^>ss_/ { inss = 1; entry = 0; next; } inss == 1 { inss = 0; next; } /^>/ && entry == 0 { if (id > 1) { writeEntry(); } id = id + 1; data = ">"substr($1, 2)"\n"; entry = entry + 1; next; } entry > 0 { data = data""$0"\n"; entry = entry + 1; next; } END { writeEntry(); close(outfile); close(outfile".index"); }'
             rm -f "${TMP_PATH}/pdb70.tar.gz"
         fi
         INPUT_TYPE="A3M"
@@ -212,8 +243,8 @@ case "${SELECTION}" in
     ;;
     "CDD")
         if notExists "${TMP_PATH}/msa.msa.gz"; then
-            downloadFile "https://ftp.ncbi.nih.gov/pub/mmdb/cdd/cdd.info" "${TMP_PATH}/version"
-            downloadFile "https://ftp.ncbi.nih.gov/pub/mmdb/cdd/fasta.tar.gz" "${TMP_PATH}/msa.tar.gz"
+            downloadFile "https://ftp.ncbi.nlm.nih.gov/pub/mmdb/cdd/cdd.info" "${TMP_PATH}/version"
+            downloadFile "https://ftp.ncbi.nlm.nih.gov/pub/mmdb/cdd/fasta.tar.gz" "${TMP_PATH}/msa.tar.gz"
         fi
         INPUT_TYPE="FASTA_MSA"
         SED_FIX_LOOKUP='s|\.FASTA||g'
@@ -234,8 +265,8 @@ case "${SELECTION}" in
     ;;
     "dbCAN2")
         if notExists "${TMP_PATH}/download.done"; then
-            downloadFile "http://bcb.unl.edu/dbCAN2/download/dbCAN-fam-aln-V9.tar.gz" "${TMP_PATH}/msa.tar.gz"
-            printf "9 %s\n" "$(date "+%s")" > "${TMP_PATH}/version"
+            downloadFile "https://bcb.unl.edu/dbCAN2/download/dbCAN-fam-aln-V14.tar.gz" "${TMP_PATH}/msa.tar.gz"
+            printf "14 %s\n" "$(date "+%s")" > "${TMP_PATH}/version"
             touch "${TMP_PATH}/download.done"
         fi
         INPUT_TYPE="FASTA_MSA"
@@ -297,7 +328,7 @@ case "${INPUT_TYPE}" in
     "FASTA_LIST")
         eval "set -- $ARR"
         # shellcheck disable=SC2086
-        "${MMSEQS}" createdb "${@}" "${OUTDB}" ${COMP_PAR} \
+        "${MMSEQS}" createdb "${@}" "${OUTDB}" ${COMP_PAR} --gpu ${GPU_ENABLED} \
             || fail "createdb died"
         for i in "${@}"; do
             rm -f -- "$i"
@@ -305,7 +336,7 @@ case "${INPUT_TYPE}" in
     ;;
     "FSA")
         # shellcheck disable=SC2086
-        "${MMSEQS}" createdb "${TMP_PATH}/"*.fsa "${OUTDB}" ${COMP_PAR} \
+        "${MMSEQS}" createdb "${TMP_PATH}/"*.fsa "${OUTDB}" ${COMP_PAR} --gpu ${GPU_ENABLED} \
             || fail "createdb died"
         rm -f -- "${TMP_PATH}/"*.fsa
     ;;
@@ -371,12 +402,12 @@ case "${INPUT_TYPE}" in
     ;;
     "GTDB")
         # shellcheck disable=SC2086
-        "${MMSEQS}" tar2db "${TMP_PATH}/gtdb.tar.gz" "${TMP_PATH}/tardb" --tar-include 'faa$' ${THREADS_PAR} \
+        "${MMSEQS}" tar2db "${TMP_PATH}/gtdb.tar.gz" "${TMP_PATH}/tardb" --tar-include 'faa.gz$' ${THREADS_PAR} \
             || fail "tar2db died"
-        sed 's|_protein\.faa||g' "${TMP_PATH}/tardb.lookup" > "${TMP_PATH}/tardb.lookup.tmp"
+        sed 's|_protein\.faa\.gz||g' "${TMP_PATH}/tardb.lookup" > "${TMP_PATH}/tardb.lookup.tmp"
         mv -f -- "${TMP_PATH}/tardb.lookup.tmp" "${TMP_PATH}/tardb.lookup"
         # shellcheck disable=SC2086
-        "${MMSEQS}" createdb "${TMP_PATH}/tardb" "${OUTDB}" ${COMP_PAR} \
+        "${MMSEQS}" createdb "${TMP_PATH}/tardb" "${OUTDB}" ${COMP_PAR} --gpu ${GPU_ENABLED} \
             || fail "createdb died"
         if [ -n "${REMOVE_TMP}" ]; then
             # shellcheck disable=SC2086
@@ -384,105 +415,112 @@ case "${INPUT_TYPE}" in
                 || fail "rmdb died"
         fi
     ;;
+    "BLASTDB")
+        eval "set -- $ARR"
+        # shellcheck disable=SC2086
+        "${MMSEQS}" convertblastdb "${@}" "${OUTDB}" ${THREADS_PAR} \
+            || fail "convertblastdb died"
+    ;;
 esac
 fi
 
-if [ -n "${TAXONOMY}" ] && notExists "${OUTDB}_mapping"; then
-    case "${SELECTION}" in
-      "SILVA")
-        mkdir -p "${TMP_PATH}/taxonomy"
-        # shellcheck disable=SC2016
-        CMD='BEGIN {
-              ids["root"] = 1;
-              print "1\t|\t1\t|\tno rank\t|\t-\t|" > taxdir"/nodes.dmp";
-              print "1\t|\troot\t|\t-\t|\tscientific name\t|" > taxdir"/names.dmp";
-          }
-          {
-              n = split($1, a, ";");
-              gsub("domain", "superkingdom", $3);
-              ids[$1] = $2;
-              gsub(/[^,;]*;$/, "", $1);
-              pname = $1;
-              if (n == 2) {
-                pname = "root";
-              }
-              pid = ids[pname];
-              printf("%s\t|\t%s\t|\t%s\t|\t-\t|\n", $2, pid, $3) > taxdir"/nodes.dmp";
-              printf("%s\t|\t%s\t|\t-\t|\tscientific name\t|\n", $2, a[n-1]) > taxdir"/names.dmp";
-          }'
-        awk -v taxdir="${TMP_PATH}/taxonomy" -F'\t' "$CMD" "${TMP_PATH}/silva_tax.txt"
-        touch "${TMP_PATH}/taxonomy/merged.dmp"
-        touch "${TMP_PATH}/taxonomy/delnodes.dmp"
-        # shellcheck disable=SC2086
-        "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxdb" --ncbi-tax-dump "${TMP_PATH}/taxonomy" --tax-mapping-file "${TMP_PATH}/silva.acc_taxid" ${THREADS_PAR}
-       ;;
-     "NR")
-        touch "${OUTDB}_mapping"
-        # shellcheck disable=SC2086
-        "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxonomy" ${THREADS_PAR} \
-            || fail "createtaxdb died"
-        # shellcheck disable=SC2086
-        "${MMSEQS}" nrtotaxmapping "${TMP_PATH}/pdb.accession2taxid" "${TMP_PATH}/prot.accession2taxid" "${OUTDB}" "${OUTDB}_mapping" ${THREADS_PAR} \
-            || fail "nrtotaxmapping died"
-       ;;
-     "GTDB")
-          # shellcheck disable=SC2016
-          CMD='BEGIN {
-              FS = "[\t;]";
-              rank["c"] = "class";
-              rank["d"] = "superkingdom";
-              rank["f"] = "family";
-              rank["g"] = "genus";
-              rank["o"] = "order";
-              rank["p"] = "phylum";
-              rank["s"] = "species";
-              taxCnt = 1;
-              ids["root"] = 1;
-              print "1\t|\t1\t|\tno rank\t|\t-\t|" > taxdir"/nodes.dmp";
-              print "1\t|\troot\t|\t-\t|\tscientific name\t|" > taxdir"/names.dmp";
-          }
-          {
-              prevTaxon=1;
-              for (i = 2; i <= NF; i++) {
-                  if ($i in ids) {
-                      prevTaxon = ids[$i];
-                  } else {
-                      taxCnt++;
-                      ids[$i] = taxCnt;
-                      r = substr($i, 0, 1);
-                      name = substr($i, 4);
-                      gsub(/_/, " ", name);
-                      printf("%s\t|\t%s\t|\t%s\t|\t-\t|\n", taxCnt, prevTaxon, rank[r]) > taxdir"/nodes.dmp";
-                      printf("%s\t|\t%s\t|\t-\t|\tscientific name\t|\n", taxCnt, name) > taxdir"/names.dmp";
-                      prevTaxon = taxCnt;
-                  }
-              }
-              printf("%s\t%s\n", $1, ids[$NF]) > taxdir"/mapping_genomes";
-          }'
-          mkdir -p "${TMP_PATH}/taxonomy"
-          awk -v taxdir="${TMP_PATH}/taxonomy" "$CMD" "${TMP_PATH}/bac120_taxonomy.tsv" "${TMP_PATH}/ar53_taxonomy.tsv"
-          touch "${TMP_PATH}/taxonomy/merged.dmp"
-          touch "${TMP_PATH}/taxonomy/delnodes.dmp"
-          # shellcheck disable=SC2086
-          "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxdb" --ncbi-tax-dump "${TMP_PATH}/taxonomy" --tax-mapping-file "${TMP_PATH}/taxonomy/mapping_genomes" --tax-mapping-mode 1 ${THREADS_PAR} \
-              || fail "createtaxdb died"
-          if [ -n "${REMOVE_TMP}" ]; then
-              rm -f -- "${TMP_PATH}/taxonomy/nodes.dmp" "${TMP_PATH}/taxonomy/names.dmp" "${TMP_PATH}/taxonomy/merged.dmp" "${TMP_PATH}/taxonomy/delnodes.dmp" "${TMP_PATH}/taxonomy/mapping_genomes" "${TMP_PATH}/bac120_taxonomy.tsv" "${TMP_PATH}/ar122_taxonomy.tsv"
-              rm -rf -- "${TMP_PATH}/taxdb" "${TMP_PATH}/taxonomy"
-          fi
-     ;;
-     *)
-       # shellcheck disable=SC2086
-       "${MMSEQS}" prefixid "${OUTDB}_h" "${TMP_PATH}/header_pref.tsv" --tsv ${THREADS_PAR} \
-           || fail "prefixid died"
-       awk '{ match($0, / OX=[0-9]+ /); if (RLENGTH != -1) { print $1"\t"substr($0, RSTART+4, RLENGTH-5); next; } match($0, / TaxID=[0-9]+ /); print $1"\t"substr($0, RSTART+7, RLENGTH-8); }' "${TMP_PATH}/header_pref.tsv" \
-           | LC_ALL=C sort -n > "${OUTDB}_mapping"
-       rm -f "${TMP_PATH}/header_pref.tsv"
-       # shellcheck disable=SC2086
-       "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxonomy" ${THREADS_PAR} \
-           || fail "createtaxdb died"
-       ;;
-     esac
+if [ -n "${TAXONOMY}" ]; then
+    if notExists "${OUTDB}_mapping"; then
+        case "${SELECTION}" in
+            "SILVA")
+            mkdir -p "${TMP_PATH}/taxonomy"
+            # shellcheck disable=SC2016
+            CMD='BEGIN {
+                ids["root"] = 1;
+                print "1\t|\t1\t|\tno rank\t|\t-\t|" > taxdir"/nodes.dmp";
+                print "1\t|\troot\t|\t-\t|\tscientific name\t|" > taxdir"/names.dmp";
+            }
+            {
+                n = split($1, a, ";");
+                gsub("domain", "superkingdom", $3);
+                ids[$1] = $2;
+                gsub(/[^,;]*;$/, "", $1);
+                pname = $1;
+                if (n == 2) {
+                    pname = "root";
+                }
+                pid = ids[pname];
+                printf("%s\t|\t%s\t|\t%s\t|\t-\t|\n", $2, pid, $3) > taxdir"/nodes.dmp";
+                printf("%s\t|\t%s\t|\t-\t|\tscientific name\t|\n", $2, a[n-1]) > taxdir"/names.dmp";
+            }'
+            awk -v taxdir="${TMP_PATH}/taxonomy" -F'\t' "$CMD" "${TMP_PATH}/silva_tax.txt"
+            touch "${TMP_PATH}/taxonomy/merged.dmp"
+            touch "${TMP_PATH}/taxonomy/delnodes.dmp"
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxdb" --ncbi-tax-dump "${TMP_PATH}/taxonomy" --tax-mapping-file "${TMP_PATH}/silva.acc_taxid" ${THREADS_PAR}
+            ;;
+            "GTDB")
+            # shellcheck disable=SC2016
+            CMD='BEGIN {
+                FS = "[\t;]";
+                rank["c"] = "class";
+                rank["d"] = "superkingdom";
+                rank["f"] = "family";
+                rank["g"] = "genus";
+                rank["o"] = "order";
+                rank["p"] = "phylum";
+                rank["s"] = "species";
+                taxCnt = 1;
+                ids["root"] = 1;
+                print "1\t|\t1\t|\tno rank\t|\t-\t|" > taxdir"/nodes.dmp";
+                print "1\t|\troot\t|\t-\t|\tscientific name\t|" > taxdir"/names.dmp";
+            }
+            {
+                prevTaxon=1;
+                for (i = 2; i <= NF; i++) {
+                    if ($i in ids) {
+                        prevTaxon = ids[$i];
+                    } else {
+                        taxCnt++;
+                        ids[$i] = taxCnt;
+                        r = substr($i, 0, 1);
+                        name = substr($i, 4);
+                        gsub(/_/, " ", name);
+                        printf("%s\t|\t%s\t|\t%s\t|\t-\t|\n", taxCnt, prevTaxon, rank[r]) > taxdir"/nodes.dmp";
+                        printf("%s\t|\t%s\t|\t-\t|\tscientific name\t|\n", taxCnt, name) > taxdir"/names.dmp";
+                        prevTaxon = taxCnt;
+                    }
+                }
+                printf("%s\t%s\n", $1, ids[$NF]) > taxdir"/mapping_genomes";
+            }'
+            mkdir -p "${TMP_PATH}/taxonomy"
+            awk -v taxdir="${TMP_PATH}/taxonomy" "$CMD" "${TMP_PATH}/bac120_taxonomy.tsv" "${TMP_PATH}/ar53_taxonomy.tsv"
+            touch "${TMP_PATH}/taxonomy/merged.dmp"
+            touch "${TMP_PATH}/taxonomy/delnodes.dmp"
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxdb" --ncbi-tax-dump "${TMP_PATH}/taxonomy" --tax-mapping-file "${TMP_PATH}/taxonomy/mapping_genomes" --tax-mapping-mode 1 ${THREADS_PAR} \
+                || fail "createtaxdb died"
+            if [ -n "${REMOVE_TMP}" ]; then
+                rm -f -- "${TMP_PATH}/taxonomy/nodes.dmp" "${TMP_PATH}/taxonomy/names.dmp" "${TMP_PATH}/taxonomy/merged.dmp" "${TMP_PATH}/taxonomy/delnodes.dmp" "${TMP_PATH}/taxonomy/mapping_genomes" "${TMP_PATH}/bac120_taxonomy.tsv" "${TMP_PATH}/ar122_taxonomy.tsv"
+                rm -rf -- "${TMP_PATH}/taxdb" "${TMP_PATH}/taxonomy"
+            fi
+            ;;
+            *)
+            # shellcheck disable=SC2086
+            "${MMSEQS}" prefixid "${OUTDB}_h" "${TMP_PATH}/header_pref.tsv" --tsv ${THREADS_PAR} \
+                || fail "prefixid died"
+            awk '{ match($0, / OX=[0-9]+ /); if (RLENGTH != -1) { print $1"\t"substr($0, RSTART+4, RLENGTH-5); next; } match($0, / TaxID=[0-9]+ /); print $1"\t"substr($0, RSTART+7, RLENGTH-8); }' "${TMP_PATH}/header_pref.tsv" \
+                | LC_ALL=C sort -n > "${OUTDB}_mapping"
+            rm -f "${TMP_PATH}/header_pref.tsv"
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxonomy" ${THREADS_PAR} \
+                || fail "createtaxdb died"
+            ;;
+        esac
+    else
+        case "${SELECTION}" in
+            NR|ClusteredNR|NT|core_nt)
+            # shellcheck disable=SC2086
+            "${MMSEQS}" createtaxdb "${OUTDB}" "${TMP_PATH}/taxonomy" ${THREADS_PAR} \
+                || fail "createtaxdb died"
+            ;;
+        esac
+    fi
 fi
 
 if notExists "${OUTDB}.version"; then

@@ -3,10 +3,12 @@ set(util_source_files
         util/alignbykmer.cpp
         util/appenddbtoindex.cpp
         util/apply.cpp
+        util/calculatelambda.cpp
         util/clusthash.cpp
         util/compress.cpp
         util/convert2fasta.cpp
         util/convertalignments.cpp
+        util/convertblastdb.cpp
         util/convertca3m.cpp
         util/convertkb.cpp
         util/convertmsa.cpp
@@ -27,14 +29,18 @@ set(util_source_files
         util/extractorfs.cpp
         util/orftocontig.cpp
         util/touchdb.cpp
+        util/filtera3m.cpp
         util/filterdb.cpp
         util/gff2db.cpp
+        util/gpuserver.cpp
         util/renamedbkeys.cpp
+        util/makepaddedseqdb.cpp
         util/masksequence.cpp
         util/maskbygff.cpp
         util/mergeclusters.cpp
         util/mergeresultsbyset.cpp
         util/mergedbs.cpp
+        util/createclusterdb.cpp
         util/msa2profile.cpp
         util/msa2result.cpp
         util/nrtotaxmapping.cpp
@@ -42,7 +48,9 @@ set(util_source_files
         util/pairaln.cpp
         util/prefixid.cpp
         util/profile2pssm.cpp
+        util/profile2neff.cpp
         util/profile2seq.cpp
+        util/recoverlongestorf.cpp
         util/result2dnamsa.cpp
         util/result2flat.cpp
         util/result2msa.cpp
@@ -54,6 +62,7 @@ set(util_source_files
         util/cpmvrmlndb.cpp
         util/extractframes.cpp
         util/sequence2profile.cpp
+        util/setextendeddbtype.cpp
         util/sortresult.cpp
         util/splitdb.cpp
         util/splitsequence.cpp
@@ -71,6 +80,7 @@ set(util_source_files
         util/tar2db.cpp
         util/unpackdb.cpp
         util/proteinaln2nucl.cpp
+        util/proteomecluster.cpp
         util/versionstring.cpp
         util/diskspaceavail.cpp
         PARENT_SCOPE

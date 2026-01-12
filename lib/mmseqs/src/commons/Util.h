@@ -7,6 +7,7 @@
 #include <vector>
 #include <limits>
 #include <map>
+#include <cstdint>
 #include "MMseqsMPI.h"
 
 #ifndef EXIT
@@ -23,6 +24,12 @@ struct assert_false : std::false_type
 
 template<typename T>
 std::string SSTR(T) {
+    static_assert(assert_false<T>::value , "Not implemented for requested type");
+    return "";
+}
+
+template<typename T>
+std::string SSTR(T, int) {
     static_assert(assert_false<T>::value , "Not implemented for requested type");
     return "";
 }
@@ -44,6 +51,8 @@ template<> std::string SSTR(long long);
 template<> std::string SSTR(unsigned long long);
 template<> std::string SSTR(double);
 template<> std::string SSTR(float);
+template<> std::string SSTR(double, int precision);
+template<> std::string SSTR(float, int precision);
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -347,7 +356,7 @@ public:
     static std::string removeWhiteSpace(std::string in);
 
     static std::map<unsigned int, std::string> readLookup(const std::string& lookupFile,
-                                                          const bool removeSplit = false);
+                                                          const unsigned char removeSplit = 0);
 
     static bool canBeCovered(const float covThr, const int covMode, float queryLength, float targetLength);
 

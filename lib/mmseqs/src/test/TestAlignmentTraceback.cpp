@@ -18,6 +18,7 @@
 #include "Parameters.h"
 
 const char* binary_name = "test_alignmenttraceback";
+DEFAULT_PARAMETER_SINGLETON_INIT
 
 struct scores{
     short H;
@@ -87,16 +88,16 @@ void sw(
     // backtrace
     int i=target_length - 1;
     int j=query_length - 1;
-    int step = 0;
+    // int step = 0;
     int state = get_val(bt, i, j);
-    int matched_cols = 0;
+    // int matched_cols = 0;
     while (state!=-1)     // while (state!=STOP)  because STOP=0
     {
-        step++;
+        // step++;
         //std::cout << step<< " " << i << " " << j << " " << state << std::endl;
         switch (state) {
             case M: // current state is MM, previous state is bMM[i][j]
-                matched_cols++;
+                // matched_cols++;
                 fprintf(stdout,"%c", subMat.num2aa[db_sequence[target_start+i]]);
                 if(query_sequence[query_start + j] == db_sequence[target_start + i]){
                     fprintf(stdout, "|");
@@ -164,7 +165,7 @@ int main(int, const char**) {
     Sequence* dbSeq = new Sequence(10000, 0, &subMat, kmer_size, true, false);
     //dbSeq->mapSequence(1,"lala2",ref_seq);
     dbSeq->mapSequence(1,1,tim2.c_str(), tim2.size());
-    SmithWaterman aligner(15000, subMat.alphabetSize, false, 1.0, Parameters::DBTYPE_AMINO_ACIDS);
+    SmithWaterman aligner(15000, subMat.alphabetSize, false, 1.0, &subMat);
     int8_t * tinySubMat = new int8_t[subMat.alphabetSize*subMat.alphabetSize];
     for (int i = 0; i < subMat.alphabetSize; i++) {
         for (int j = 0; j < subMat.alphabetSize; j++) {
