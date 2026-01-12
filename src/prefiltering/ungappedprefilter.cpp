@@ -359,7 +359,7 @@ void runFilterOnCpu(Parameters & par, BaseMatrix * subMat, int8_t * tinySubMat,
         Sequence qSeq(par.maxSeqLen, querySeqType, subMat, 0, false, par.compBiasCorrection);
         Sequence tSeq(par.maxSeqLen, targetSeqType, subMat, 0, false, par.compBiasCorrection);
         SmithWaterman aligner(par.maxSeqLen, subMat->alphabetSize,
-                              par.compBiasCorrection, par.compBiasCorrectionScale, NULL);
+                              par.compBiasCorrection, par.compBiasCorrectionScale, targetSeqType);
 
         std::string resultBuffer;
         resultBuffer.reserve(262144);
@@ -418,6 +418,8 @@ void runFilterOnCpu(Parameters & par, BaseMatrix * subMat, int8_t * tinySubMat,
                     } else {
                         res = aligner.ssw_align(
                                 tSeq.numSequence,
+                                tSeq.numConsensusSequence,
+                                tSeq.getAlignmentProfile(),
                                 tSeq.L,
                                 backtrace,
                                 par.gapOpen.values.aminoacid(),
@@ -428,7 +430,8 @@ void runFilterOnCpu(Parameters & par, BaseMatrix * subMat, int8_t * tinySubMat,
                                 par.covMode,
                                 par.covThr,
                                 par.correlationScoreWeight,
-                                qSeq.L / 2
+                                qSeq.L / 2,
+                                tId
                         );
                     }
                     score = res.score1;
