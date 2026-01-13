@@ -58,7 +58,7 @@ public:
     std::string foldseekPath;
 
     static std::string getAbsExePath();
-private:
+
     LocalParameters() : 
         Parameters(),
         PARAM_CLUSTERSEARCH_MODE(PARAM_CLUSTERSEARCH_MODE_ID, "--search-mode", "Cluster Search Mode", "0: sequence search with MMseqs2, 1: structure comparison with Foldseek, 2: Foldseek + ProstT5", typeid(int), (void *) &clusterSearchMode, "^[0-2]{1}"),
@@ -167,6 +167,7 @@ private:
         //TODO: add citations (foldseek & mmseqs & clustersearch)
         citations.emplace(CITATION_SPACEDUST, "");
     }
+private:
     LocalParameters(LocalParameters const&);
     ~LocalParameters() {};
     void operator=(LocalParameters const&);

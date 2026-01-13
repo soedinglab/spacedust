@@ -21,7 +21,9 @@ bool hide_base_downloads = false;
 std::vector<int> FlatfileAndFolder = {LocalParameters::DBTYPE_FLATFILE, LocalParameters::DBTYPE_DIRECTORY};
 
 LocalParameters& localPar = LocalParameters::getLocalInstance();
-std::vector<Command> commands = {
+
+extern std::vector<Command> baseCommands;
+std::vector<Command> spacedustCommands = {
         // {"easy-search",             easysearch,           &localPar.easyclustersearch, COMMAND_EASY,
         //         "Find clusters of colocalized hits between any query-target set pairs from FASTA input",
         //         NULL,
@@ -39,7 +41,7 @@ std::vector<Command> commands = {
                 CITATION_MMSEQS2, {{"fast[a|q]File[.gz|bz2]", DbType::ACCESS_MODE_INPUT, DbType::NEED_DATA | DbType::VARIADIC, &FlatfileAndFolder },
                                                            {"setDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::sequenceDb },
                                                            {"tmpDir", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::directory}}},
-        {"aa2foldseek",           aa2foldseek,           &localPar.aa2foldseek,           COMMAND_MAIN,
+                {"aa2foldseek",           aa2foldseek,           &localPar.aa2foldseek,           COMMAND_MAIN,
                 "Map a sequence DB to reference foldseek DB",
                 NULL,
                 "Ruoshi Zhang <ruoshi.zhang@mpinat.mpg.de> & Milot Mirdita <milot@mirdita.de>",
@@ -103,3 +105,12 @@ std::vector<Command> commands = {
                                                             {"outDB", DbType::ACCESS_MODE_OUTPUT, DbType::NEED_DATA, &DbValidator::resultDb }}},
 };
 
+void init() {
+    registerCommands(&baseCommands);
+    registerCommands(&spacedustCommands);
+}
+void (*initCommands)(void) = init;
+
+void initParameterSingleton() { 
+    LocalParameters::initInstance(); 
+}
