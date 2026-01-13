@@ -75,13 +75,7 @@ int clusterdb(int argc, const char **argv, const Command &command) {
         par.evalProfile = 0.1;
         par.evalThr = 0.1;
     }
-    std::vector<MMseqsParameter*> result2profile_ss;
-    for (size_t i = 0; i < par.result2profile.size(); i++) {
-        if (par.result2profile[i]->uniqid != par.PARAM_GAP_PSEUDOCOUNT.uniqid) {
-            result2profile_ss.push_back(par.result2profile[i]);
-        }
-    }
-    cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(result2profile_ss).c_str());
+    cmd.addVariable("PROFILE_SS_PAR", par.createParameterString(par.result2profile).c_str());
 
     FileUtil::writeFile(tmpDir + "/clusterdb.sh", clusterdb_sh, clusterdb_sh_len);
     std::string program(tmpDir + "/clusterdb.sh");
