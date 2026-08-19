@@ -1,6 +1,7 @@
 #include "DBReader.h"
 #include "DBWriter.h"
 #include "Debug.h"
+#include "FileUtil.h"
 #include "Util.h"
 #include "MemoryMapped.h"
 #include "Orf.h"
@@ -9,6 +10,49 @@
 #ifdef OPENMP
 #include <omp.h>
 #endif
+
+// TODO: Move into MMseqs2?
+void renumberLookup(const std::string &lookupFile) {
+    MemoryMapped lookup(lookupFile, MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
+    if (lookup.isValid() == false) {
+        return;
+    }
+    std::string tmpFile = lookupFile + "_tmp";
+    FILE *out = FileUtil::openAndDelete(tmpFile.c_str(), "w");
+    std::string buffer;
+    buffer.reserve(1024 * 1024);
+    char *data = (char *) lookup.getData();
+    char *end = data + lookup.mappedSize();
+    size_t id = 0;
+    while (data < end && *data != '\0') {
+        char *line = data;
+        data = Util::skipLine(data);
+        char *rest = line;
+        while (rest < data && *rest != '\t') {
+            rest++;
+        }
+        buffer.append(SSTR(id));
+        buffer.append(rest, data - rest);
+        id++;
+        if (buffer.size() >= 1024 * 1024) {
+            if (fwrite(buffer.c_str(), sizeof(char), buffer.size(), out) != buffer.size()) {
+                Debug(Debug::ERROR) << "Cannot write to file " << tmpFile << "\n";
+                EXIT(EXIT_FAILURE);
+            }
+            buffer.clear();
+        }
+    }
+    if (fwrite(buffer.c_str(), sizeof(char), buffer.size(), out) != buffer.size()) {
+        Debug(Debug::ERROR) << "Cannot write to file " << tmpFile << "\n";
+        EXIT(EXIT_FAILURE);
+    }
+    if (fclose(out) != 0) {
+        Debug(Debug::ERROR) << "Cannot close file " << tmpFile << "\n";
+        EXIT(EXIT_FAILURE);
+    }
+    lookup.close();
+    FileUtil::move(tmpFile.c_str(), lookupFile.c_str());
+}
 
 int gff2db(int argc, const char **argv, const Command &command) {
     Parameters &par = Parameters::getInstance();
@@ -75,7 +119,8 @@ int gff2db(int argc, const char **argv, const Command &command) {
 
         std::vector<size_t> localFeatureCount(features.size(), 0);
 
-#pragma omp for schedule(dynamic, 1) nowait
+        // static is required for createRenumberedDB to work correctly
+#pragma omp for schedule(static) nowait
         for (size_t i = 0; i < par.filenames.size(); ++i) {
             progress.updateProgress();
             MemoryMapped file(par.filenames[i], MemoryMapped::WholeFile, MemoryMapped::SequentialScan);
@@ -133,6 +178,14 @@ int gff2db(int argc, const char **argv, const Command &command) {
                     Debug(Debug::ERROR) << "GFF entry not found in sequence database: " << name << "\n";
                     EXIT(EXIT_FAILURE);
                 }
+                
+                size_t seqLen = reader.getSeqLen(seqId);
+                if (start < 1 || end < start || end > seqLen) {
+                    Debug(Debug::WARNING) 
+                        << "Range " << start << "-" << end << " is not inside sequence "
+                        << name << " (length " << seqLen << ") of " << par.filenames[i] << ". The entry is skipped\n";
+                    continue;
+                }
 
                 unsigned int key = __sync_fetch_and_add(&(entries_num), 1);
                 size_t bufferLen;
@@ -149,11 +202,11 @@ int gff2db(int argc, const char **argv, const Command &command) {
                 writer.writeStart(thread_idx);
                 if (strand == "+") {
                     size_t len = snprintf(buffer, sizeof(buffer), "%u\t%s_%zu_%zu_%zu\t%zu\n", key, name.c_str(), idx, start, end, i);
-                    lookupWriter.writeData(buffer, len, thread_idx, false, false);
+                    lookupWriter.writeData(buffer, len, key, thread_idx, false, false);
                     writer.writeAdd(seq + start - 1 , length, thread_idx);
                 } else {
                     size_t len = snprintf(buffer, sizeof(buffer), "%u\t%s_%zu_%zu_%zu\t%zu\n", key, name.c_str(), idx, end, start, i);
-                    lookupWriter.writeData(buffer, len, thread_idx, false, false);
+                    lookupWriter.writeData(buffer, len, key, thread_idx, false, false);
                     // safe accessing in reverse order
                     for (size_t j = 0; j < length; j++) { 
                         revStr.append(1, Orf::complement(seq[end - 1 - j]));
@@ -185,7 +238,7 @@ int gff2db(int argc, const char **argv, const Command &command) {
             Debug(Debug::INFO) << " - " << features[i] << ": " << featureCount[i] << "\n";
         }
     } else {
-        Debug(Debug::INFO) << (entries_num + 1) << " features were extracted\n";
+        Debug(Debug::INFO) << entries_num << " features were extracted\n";
     }
 
     if (par.filenames.size() > 1 && par.threads > 1) {
@@ -196,12 +249,17 @@ int gff2db(int argc, const char **argv, const Command &command) {
             {
 #pragma omp task
                 {
-                    DBWriter::createRenumberedDB(outHdr, outHdrIndex, "", "");
+                    DBWriter::createRenumberedDB(outHdr, outHdrIndex, "", "", DBReader<unsigned int>::SORT_BY_OFFSET);
                 }
 
 #pragma omp task
                 {
-                    DBWriter::createRenumberedDB(outDb, outDbIndex, outDb, outDbIndex);
+                    DBWriter::createRenumberedDB(outDb, outDbIndex, "", "", DBReader<unsigned int>::SORT_BY_OFFSET);
+                }
+
+#pragma omp task
+                {
+                    renumberLookup(outLookup);
                 }
             }
         }
