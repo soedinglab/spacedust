@@ -358,6 +358,37 @@ int createdb(int argc, const char **argv, const Command& command) {
     std::string dataFile = filenames.back();
     filenames.pop_back();
 
+    // A single tsv file holds one input path per line
+    if (filenames.empty() == false && Util::endsWith(".tsv", filenames[0])) {
+        if (filenames.size() > 1) {
+            Debug(Debug::ERROR) << "Only one tsv file can be given\n";
+            EXIT(EXIT_FAILURE);
+        }
+        std::string tsv = filenames.back();
+        filenames.pop_back();
+
+        FILE* file = FileUtil::openFileOrDie(tsv.c_str(), "r", true);
+        char* line = NULL;
+        size_t len = 0;
+        ssize_t read;
+        while ((read = getline(&line, &len, file)) != -1) {
+            if (read > 0 && line[read - 1] == '\n') {
+                line[read - 1] = '\0';
+                read--;
+            }
+            if (read > 0) {
+                filenames.push_back(line);
+            }
+        }
+        free(line);
+        fclose(file);
+
+        if (filenames.empty()) {
+            Debug(Debug::ERROR) << "No input files are listed in " << tsv << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+    }
+
     for (size_t i = 0; i < filenames.size(); i++) {
         if (FileUtil::directoryExists(filenames[i].c_str()) == true) {
             Debug(Debug::ERROR) << "File " << filenames[i] << " is a directory\n";

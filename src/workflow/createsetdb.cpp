@@ -52,7 +52,12 @@ int createsetdb(int argc, const char **argv, const Command &command) {
 
     PatternCompiler include(par.fileInclude.c_str());
     PatternCompiler exclude(par.fileExclude.c_str());
-    
+
+    if (par.filenames.empty()) {
+        Debug(Debug::ERROR) << "No input was given\n";
+        EXIT(EXIT_FAILURE);
+    }
+
     for (size_t i = 1; i < par.filenames.size(); ++i) {
         if (FileUtil::directoryExists(par.filenames[i].c_str()) || Util::endsWith(".tsv", par.filenames[i].c_str())) {
             Debug(Debug::ERROR) << "Only one directory or tsv file (" << par.filenames[i] << ") or a list of files can be given\n";
@@ -110,6 +115,29 @@ int createsetdb(int argc, const char **argv, const Command &command) {
         }
         free(line);
         fclose(file);
+    }
+
+    if (par.filenames.empty()) {
+        Debug(Debug::ERROR) << "No input files were found\n";
+        EXIT(EXIT_FAILURE);
+    }
+
+    bool dbInput = par.filenames.size() == 1 && FileUtil::fileExists((par.filenames[0] + ".dbtype").c_str());
+    if (dbInput == false) {
+        std::string inputTsv = tmpDir + "/input.tsv";
+        FILE* tsvFile = FileUtil::openAndDelete(inputTsv.c_str(), "w");
+        for (size_t i = 0; i < par.filenames.size(); ++i) {
+            if (fprintf(tsvFile, "%s\n", par.filenames[i].c_str()) < 0) {
+                Debug(Debug::ERROR) << "Cannot write to file " << inputTsv << "\n";
+                EXIT(EXIT_FAILURE);
+            }
+        }
+        if (fclose(tsvFile) != 0) {
+            Debug(Debug::ERROR) << "Cannot close file " << inputTsv << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+        par.filenames.clear();
+        par.filenames.push_back(inputTsv);
     }
 
     std::string gffDir = par.gffDir;

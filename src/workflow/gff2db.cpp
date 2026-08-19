@@ -63,6 +63,37 @@ int gff2db(int argc, const char **argv, const Command &command) {
     std::string seqDb = par.filenames.back();
     par.filenames.pop_back();
 
+    // A single tsv file holds one GFF path per line
+    if (par.filenames.empty() == false && Util::endsWith(".tsv", par.filenames[0])) {
+        if (par.filenames.size() > 1) {
+            Debug(Debug::ERROR) << "Only one tsv file can be given\n";
+            EXIT(EXIT_FAILURE);
+        }
+        std::string tsv = par.filenames.back();
+        par.filenames.pop_back();
+
+        FILE* file = FileUtil::openFileOrDie(tsv.c_str(), "r", true);
+        char* line = NULL;
+        size_t len = 0;
+        ssize_t read;
+        while ((read = getline(&line, &len, file)) != -1) {
+            if (read > 0 && line[read - 1] == '\n') {
+                line[read - 1] = '\0';
+                read--;
+            }
+            if (read > 0) {
+                par.filenames.push_back(line);
+            }
+        }
+        free(line);
+        fclose(file);
+
+        if (par.filenames.empty()) {
+            Debug(Debug::ERROR) << "No GFF files are listed in " << tsv << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+    }
+
     DBReader<unsigned int> reader(seqDb.c_str(), (seqDb + ".index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA | DBReader<unsigned int>::USE_LOOKUP_REV);
     reader.open(DBReader<unsigned int>::NOSORT);
     DBReader<unsigned int> headerReader((seqDb + "_h").c_str(), (seqDb + "_h.index").c_str(), par.threads, DBReader<unsigned int>::USE_INDEX | DBReader<unsigned int>::USE_DATA);
@@ -98,8 +129,13 @@ int gff2db(int argc, const char **argv, const Command &command) {
     }
     std::vector<size_t> featureCount(features.size(), 0);
 
-    if (par.filenames.size() < reader.getSize()) {
-        Debug(Debug::WARNING) << "Not enough GFF files are provided. Some results might be omitted\n";
+    size_t numSeqFiles = 0;
+    for (size_t i = 0; i < reader.getLookupSize(); ++i) {
+        numSeqFiles = std::max(numSeqFiles, (size_t) reader.getLookupFileNumber(i) + 1);
+    }
+    if (par.filenames.size() < numSeqFiles) {
+        Debug(Debug::WARNING) << par.filenames.size() << " GFF files were given for " << numSeqFiles
+                              << " sequence files. Some sets will be empty\n";
     }
 
     unsigned int entries_num = 0;
