@@ -24,6 +24,7 @@ public :
     BestHitBySetFilter(const std::string &targetDbName, const std::string &resultDbName,
                        const std::string &outputDbName, bool simpleBestHitMode, int suboptHitsFactor, unsigned int threads, unsigned int compressed) :
             Aggregation(targetDbName, resultDbName, outputDbName, threads, compressed), simpleBestHitMode(simpleBestHitMode), suboptHitsFactor(suboptHitsFactor) {
+        targetKeyColumn = 0;
         std::string sizeDbName = targetDbName + "_set_size";
         std::string sizeDbIndex = targetDbName + "_set_size.index";
         targetSizeReader = new DBReader<unsigned int>(sizeDbName.c_str(), sizeDbIndex.c_str(), threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
@@ -38,7 +39,7 @@ public :
 
     void prepareInput(unsigned int, unsigned int) {}
 
-    std::string aggregateEntry(std::vector<std::vector<std::string>> &dataToAggregate, unsigned int, unsigned int targetSetKey, unsigned int thread_idx)  {
+    std::string aggregateEntry(std::vector<std::vector<std::string>> &dataToAggregate, unsigned int querySetKey, unsigned int targetSetKey, unsigned int thread_idx)  {
         double bestScore = -DBL_MAX;
         double secondBestScore = -DBL_MAX;
         double bestEval = DBL_MAX;
@@ -59,7 +60,7 @@ public :
         std::vector<double> logCorrectedPvalList;
         std::vector<double> bestEvalList;
         for (size_t i = 0; i < dataToAggregate.size(); i++) {
-            double eval = strtod(dataToAggregate[i][4].c_str(), NULL);
+            double eval = strtod(dataToAggregate[i][3].c_str(), NULL);
             double pval = eval/nbrGenes;
             //prevent log(0)
             if (pval == 0) {
@@ -89,7 +90,7 @@ public :
         if((suboptHitsFactor > 0) && simpleBestHitMode && dataToAggregate.size() > 1){
             double evalThr = bestEval * suboptHitsFactor; 
             for (size_t i = 0; i < dataToAggregate.size(); i++) {
-                double eval = strtod(dataToAggregate[i][4].c_str(), NULL);
+                double eval = strtod(dataToAggregate[i][3].c_str(), NULL);
                 if( eval <= evalThr){
                     allBestEntries.push_back(&dataToAggregate[i]);
                     bestEvalList.push_back(eval);
@@ -122,9 +123,13 @@ public :
         buffer.reserve(1024);
 
         for (size_t j = 0; j < allBestEntries.size(); j++) {
-            // Aggregate the full line into string
+            // Aggregate the full line into string.
+            buffer.append(SSTR(querySetKey));
+            buffer.append(1, '\t');
             for (size_t i = 0; i < allBestEntries[j]->size(); ++i) {
-                if (i == 2) {
+                // field 1 of the raw line holds the alignment score
+                // and is replaced by the corrected p-value
+                if (i == 1) {
                     char tmpBuf[15];
                     sprintf(tmpBuf, "%.3E", logCorrectedPvalList[j]);
                     buffer.append(tmpBuf);

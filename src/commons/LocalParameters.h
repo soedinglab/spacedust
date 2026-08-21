@@ -130,6 +130,7 @@ public:
         createsetdb.push_back(&PARAM_FILE_INCLUDE);
         createsetdb.push_back(&PARAM_FILE_EXCLUDE);
         createsetdb.push_back(&PARAM_GFF_DIR);
+        createsetdb.push_back(&PARAM_REMOVE_TMP_FILES);
 
         // multi hit search
         clustersearchworkflow = combineList(searchworkflow, besthitbyset);

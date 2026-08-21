@@ -8,6 +8,24 @@ notExists() {
 	[ ! -f "$1" ]
 }
 
+notDone() {
+    [ ! -f "${TMP_PATH}/$1.done" ]
+}
+
+markDone() {
+    touch "${TMP_PATH}/$1.done"
+}
+
+freeDb() {
+    [ -n "${REMOVE_TMP}" ] || return 0
+    # shellcheck disable=SC2086
+    "$MMSEQS" rmdb "${TMP_PATH}/$1" ${VERBOSITY}
+    if [ -f "${TMP_PATH}/$1_h.dbtype" ]; then
+        # shellcheck disable=SC2086
+        "$MMSEQS" rmdb "${TMP_PATH}/$1_h" ${VERBOSITY}
+    fi
+}
+
 #pre processing
 [ -z "$MMSEQS" ] && echo "Please set the environment variable \$MMSEQS to your MMSEQS binary." && exit 1;
 # check number of input variables
@@ -33,118 +51,144 @@ fi
 if [ -n "${USE_PROFILE}" ]; then
     if [ -n "${USE_FOLDSEEK}" ]; then
         if [ -n "${USE_PROSTT5}" ] ; then
-            if notExists "${TMP_PATH}/result.index"; then
+            if notDone "result"; then
                 # shellcheck disable=SC2086
                 "${FOLDSEEK}" search "${QUERY}" "${TARGET}_clu" "${TMP_PATH}/result" "${TMP_PATH}/search" --cluster-search 1 ${FOLDSEEKSEARCH_PAR}\
                     || fail "foldseek search failed"
+                markDone "result"
             fi
         else
-            if notExists "${TMP_PATH}/result_foldseek.index"; then
+            if notDone "result_foldseek"; then
                 # shellcheck disable=SC2086
                 "${FOLDSEEK}" search "${QUERY}_foldseek" "${TARGET}_foldseek_clu" "${TMP_PATH}/result_foldseek" "${TMP_PATH}/search" --cluster-search 1 ${FOLDSEEKSEARCH_PAR}\
                     || fail "foldseek search failed"
+                markDone "result_foldseek"
             fi
-            if notExists "${TMP_PATH}/result_clu.index"; then
+            if notDone "result_clu"; then
                 # shellcheck disable=SC2086
                 "${MMSEQS}" search "${QUERY}_unmapped" "${TARGET}_clu" "${TMP_PATH}/result_clu" "${TMP_PATH}/search" ${SEARCH_PAR} \
                     || fail "mmseqs search failed"
+                markDone "result_clu"
             fi
-            if notExists "${TMP_PATH}/result_exp.index"; then
+            if notDone "result_exp"; then
                 # shellcheck disable=SC2086
                 "${MMSEQS}" expandaln "${QUERY}_unmapped" "${TARGET}_clu" "${TMP_PATH}/result_clu" "${TARGET}_clu_aln" "${TMP_PATH}/result_exp" ${THREADS_PAR} \
                     || fail "expandaln failed"
+                freeDb "result_clu"
+                markDone "result_exp"
             fi
-            if notExists "${TMP_PATH}/result_mmseqs.index"; then
+            if notDone "result_mmseqs"; then
                 # shellcheck disable=SC2086
                 "${MMSEQS}" align "${QUERY}_unmapped" "${TARGET}" "${TMP_PATH}/result_exp" "${TMP_PATH}/result_mmseqs" -a --alt-ali 10 ${THREADS_PAR} \
                     || fail "realign failed"
+                freeDb "result_exp"
+                markDone "result_mmseqs"
             fi
-            if notExists "${TMP_PATH}/result.index"; then
+            if notDone "result"; then
                 # shellcheck disable=SC2086
                 "${MMSEQS}" concatdbs "${TMP_PATH}/result_foldseek" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/result" --preserve-keys ${THREADS_PAR} \
                     || fail "concatdbs failed"
+                freeDb "result_foldseek"
+                freeDb "result_mmseqs"
+                markDone "result"
             fi
         fi
     else
-        if notExists "${TMP_PATH}/result_clu.index"; then
+        if notDone "result_clu"; then
             # shellcheck disable=SC2086
             "${MMSEQS}" search "${QUERY}" "${TARGET}_clu_rep_profile" "${TMP_PATH}/result_clu" "${TMP_PATH}/search" ${SEARCH_PAR} \
                 || fail "search failed"
+            markDone "result_clu"
         fi
 
         #realignment?
-        if notExists "${TMP_PATH}/result.index"; then
+        if notDone "result"; then
             # shellcheck disable=SC2086
             "${MMSEQS}" expandaln "${QUERY}" "${TARGET}_clu_rep_profile" "${TMP_PATH}/result_clu" "${TARGET}_clu_aln" "${TMP_PATH}/result" ${THREADS_PAR} \
                 || fail "expandaln failed"
+            freeDb "result_clu"
+            markDone "result"
         fi
     fi
 
 else
-    if notExists "${TMP_PATH}/result.index"; then
+    if notDone "result"; then
         if [ -n "${USE_FOLDSEEK}" ]; then
             if [ -n "${USE_PROSTT5}" ] ; then
-                if notExists "${TMP_PATH}/result.index"; then
+                if notDone "result"; then
                     # shellcheck disable=SC2086
                     "${FOLDSEEK}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
                         || fail "foldseek search failed"
+                    markDone "result"
                 fi
             else
-                if notExists "${TMP_PATH}/result_foldseek.index"; then
+                if notDone "result_foldseek"; then
                     # shellcheck disable=SC2086
                     "${FOLDSEEK}" search "${QUERY}_foldseek" "${TARGET}_foldseek" "${TMP_PATH}/result_foldseek" "${TMP_PATH}/search" ${FOLDSEEKSEARCH_PAR}\
                         || fail "foldseek search failed"
+                    markDone "result_foldseek"
                 fi
-                if notExists "${TMP_PATH}/result_mmseqs.index"; then
+                if notDone "result_mmseqs"; then
                     # shellcheck disable=SC2086
                     "${MMSEQS}" search "${QUERY}_unmapped" "${TARGET}" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/search" ${SEARCH_PAR} \
                         || fail "mmseqs search failed"
+                    markDone "result_mmseqs"
                 fi
-                if notExists "${TMP_PATH}/result.index"; then
+                if notDone "result"; then
                     # shellcheck disable=SC2086
                     "${MMSEQS}" concatdbs "${TMP_PATH}/result_foldseek" "${TMP_PATH}/result_mmseqs" "${TMP_PATH}/result" --preserve-keys ${THREADS_PAR} \
                         || fail "concatdbs failed"
+                    freeDb "result_foldseek"
+                    freeDb "result_mmseqs"
+                    markDone "result"
                 fi
             fi
         else
-            if notExists "${TMP_PATH}/result.index"; then
+            if notDone "result"; then
             # shellcheck disable=SC2086
             "${MMSEQS}" search "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/search" ${SEARCH_PAR} \
                 || fail "mmseqs search failed"
+                markDone "result"
             fi
         fi
     fi
 fi
 
-if notExists "${TMP_PATH}/result_prefixed.index"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" prefixid  "${TMP_PATH}/result" "${TMP_PATH}/result_prefixed" ${THREADS_PAR} \
-        || fail "prefixid failed"
+# the search tmp is dead as soon as search returns
+if [ -n "${REMOVE_TMP}" ]; then
+    rm -rf "${TMP_PATH}/search"
 fi
 
-if notExists "${TMP_PATH}/aggregate.index"; then
+if notDone "aggregate"; then
     # aggregation: take for each target set the best hit
     # shellcheck disable=SC2086
-    "${MMSEQS}" besthitbyset "${QUERY}" "${TARGET}" "${TMP_PATH}/result_prefixed" "${TMP_PATH}/aggregate" ${BESTHITBYSET_PAR} \
+    "${MMSEQS}" besthitbyset "${QUERY}" "${TARGET}" "${TMP_PATH}/result" "${TMP_PATH}/aggregate" ${BESTHITBYSET_PAR} \
         || fail "aggregate best hit failed"
+    markDone "aggregate"
 fi
 
-if notExists "${TMP_PATH}/aggregate_merged.index"; then
+if notDone "aggregate_merged"; then
     # shellcheck disable=SC2086
     "${MMSEQS}" mergeresultsbyset "${QUERY}_set_to_member" "${TMP_PATH}/aggregate" "${TMP_PATH}/aggregate_merged" ${THREADS_PAR} \
         || fail "mergesetresults failed"
+    freeDb "aggregate"
+    markDone "aggregate_merged"
 fi
 
-if notExists "${TMP_PATH}/matches.index"; then
+if notDone "matches"; then
     # shellcheck disable=SC2086
     "${MMSEQS}" combinehits "${QUERY}" "${TARGET}" "${TMP_PATH}/aggregate_merged" "${TMP_PATH}/matches" "${TMP_PATH}" ${COMBINEHITS_PAR} \
         || fail "combinepvalperset failed"
+    freeDb "aggregate_merged"
+    markDone "matches"
 fi
 
-if notExists "${TMP_PATH}/clusters.index"; then
+if notDone "clusters"; then
     # shellcheck disable=SC2086
     "${MMSEQS}" clusterhits "${QUERY}" "${TARGET}" "${TMP_PATH}/matches" "${TMP_PATH}/clusters" ${CLUSTERHITS_PAR} \
         || fail "clusterhits failed"
+    freeDb "matches"
+    markDone "clusters"
 fi
 
 # shellcheck disable=SC2086
@@ -152,33 +196,31 @@ fi
     || fail "summarizeresults failed"
 
 #postprocessing
-if notExists "${TMP_PATH}/clu_to_seq.index"; then
+if notDone "clu_to_seq"; then
     # shellcheck disable=SC2086
     "${MMSEQS}" filterdb "${TMP_PATH}/clusters" "${TMP_PATH}/clu_to_seq" --trim-to-one-column ${THREADS_PAR} \
         || fail "filterdb failed"
+    markDone "clu_to_seq"
 fi
 
-if notExists "${TMP_PATH}/seq_to_clu.index"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" swapdb "${TMP_PATH}/clu_to_seq" "${OUTPUT}_seq_to_clu" ${THREADS_PAR} \
-        || fail "swapdb failed"
-fi
+# shellcheck disable=SC2086
+"${MMSEQS}" swapdb "${TMP_PATH}/clu_to_seq" "${OUTPUT}_seq_to_clu" ${THREADS_PAR} \
+    || fail "swapdb failed"
 
 if [ -n "${REMOVE_TMP}" ]; then
     echo "Remove temporary files"
     rm -rf "${TMP_PATH}/search"
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/result" ${VERBOSITY}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/result_prefixed" ${VERBOSITY}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/aggregate" ${VERBOSITY}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/aggregate_merged" ${VERBOSITY}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/matches" ${VERBOSITY}
-    # shellcheck disable=SC2086
-    "$MMSEQS" rmdb "${TMP_PATH}/clusters" ${VERBOSITY}
+    freeDb "result"
+    freeDb "clusters"
+    freeDb "result_foldseek"
+    freeDb "result_mmseqs"
+    freeDb "result_clu"
+    freeDb "result_exp"
+    freeDb "aggregate"
+    freeDb "aggregate_merged"
+    freeDb "matches"
+    freeDb "clu_to_seq"
+    rm -f "${TMP_PATH}"/*.done
     rm -f "${TMP_PATH}/clustersearch.sh"
 fi
 

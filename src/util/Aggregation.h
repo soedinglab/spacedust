@@ -25,6 +25,8 @@ protected:
     DBReader<unsigned int> *targetSetReader;
     unsigned int threads;
     unsigned int compressed;
+    // Field of a result line that holds the target key
+    unsigned int targetKeyColumn;
 
     void buildMap(char *data, int thread_idx, std::map<unsigned int, std::vector<std::vector<std::string>>> &dataToAggregate);
 };

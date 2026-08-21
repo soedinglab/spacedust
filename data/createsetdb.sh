@@ -91,6 +91,12 @@ if [ "$("${MMSEQS}" dbtype "${TMP_PATH}/seqDB")" = "Nucleotide" ]; then
         # shellcheck disable=SC2086
         "${MMSEQS}" translatenucs "${OUTDB}_nucl" "${OUTDB}" ${TRANSLATENUCS_PAR} \
             || fail "translatenucs failed"
+        if [ -n "${REMOVE_TMP}" ]; then
+            # shellcheck disable=SC2086
+            "${MMSEQS}" rmdb "${TMP_PATH}/seqDB" ${VERBOSITY}
+            # shellcheck disable=SC2086
+            "${MMSEQS}" rmdb "${TMP_PATH}/seqDB_h" ${VERBOSITY}
+        fi
     fi
 
 elif [ "$("${MMSEQS}" dbtype "${TMP_PATH}/seqDB")" = "Aminoacid" ]; then 

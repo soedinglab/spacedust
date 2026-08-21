@@ -8,7 +8,7 @@
 
 Aggregation::Aggregation(const std::string &targetDbName, const std::string &resultDbName,
                          const std::string &outputDbName, unsigned int threads, unsigned int compressed)
-        : resultDbName(resultDbName), outputDbName(outputDbName), threads(threads), compressed(compressed) {
+        : resultDbName(resultDbName), outputDbName(outputDbName), threads(threads), compressed(compressed), targetKeyColumn(1) {
     std::string sizeDbName = targetDbName + "_member_to_set";
     std::string sizeDbIndex = targetDbName + "_member_to_set.index";
     targetSetReader = new DBReader<unsigned int>(sizeDbName.c_str(), sizeDbIndex.c_str(), threads, DBReader<unsigned int>::USE_DATA|DBReader<unsigned int>::USE_INDEX);
@@ -32,10 +32,14 @@ void Aggregation::buildMap(char *data, int thread_idx, std::map<unsigned int, st
         }
 
         std::vector<std::string> columns = Util::split(line, "\t");
-        unsigned int targetKey = Util::fast_atoi<unsigned int>(columns[1].c_str());
+        if (columns.size() <= targetKeyColumn) {
+            Debug(Debug::ERROR) << "Not enough columns in result line: " << line << "\n";
+            EXIT(EXIT_FAILURE);
+        }
+        unsigned int targetKey = Util::fast_atoi<unsigned int>(columns[targetKeyColumn].c_str());
         size_t setId = targetSetReader->getId(targetKey);
         if (setId == UINT_MAX) {
-            Debug(Debug::ERROR) << "Invalid target database key " << columns[1] << ".\n";
+            Debug(Debug::ERROR) << "Invalid target database key " << columns[targetKeyColumn] << ".\n";
             EXIT(EXIT_FAILURE);
         }
         char *data = targetSetReader->getData(setId, thread_idx);
