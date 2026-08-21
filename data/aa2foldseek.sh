@@ -3,6 +3,11 @@
 [ -z "$MMSEQS" ] && echo "Please set the environment variable \$MMSEQS to your MMSEQS binary." && exit 1;
 [ "$#" -ne 3 ] && echo "Please provide <inputDB> <targetFoldSeekDB> <tmpDir>" && exit 1
 
+fail() {
+    echo "Error: $1"
+    exit 1
+}
+
 notExists() {
 	[ ! -f "$1" ]
 }
