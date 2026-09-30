@@ -471,15 +471,15 @@ unsigned int cluster_idx = 0;
                     for(size_t j = 0; j < nodes[i].size(); j++){
                         cluster.push_back(match[nodes[i][j]]);
                     }
-                    double pCO = exp(-clusterMatchScore(lGammaLookup, cluster));
+                    double logP = -clusterMatchScore(lGammaLookup, cluster);
                     if (neighborKept > 0.0) {
                         //close relatives can share the gene order from first to last hit by descent
                         //cluster is already incidentally sorted by clusterMatchScore/findConservedPairs
                         //take min/max qPos to not rely on incidental behavior
                         std::pair<std::vector<hit>::iterator, std::vector<hit>::iterator> span = std::minmax_element(cluster.begin(), cluster.end());
-                        double notScrambled = pow(neighborKept, span.second->qPos - span.first->qPos);
-                        pCO = 1.0 - (1.0 - notScrambled) * (1.0 - pCO);
+                        logP = std::max(logP, 0.5 * (span.second->qPos - span.first->qPos) * log(neighborKept));
                     }
+                    double pCO = exp(logP);
                     double pMH = multihitPval(lGammaLookup, cluster, Nq, par.alpha);
                     if(pCO <= par.pCluThr && (pMH <= par.pMHThr)){
                         headerBuffer.append(SSTR(qSet));
