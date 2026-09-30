@@ -108,6 +108,7 @@ int Aggregation::runWithHeader() {
     DBWriter hdrwriter(outputHdrName.c_str(), outputHdrIndex.c_str(), threads, compressed, Parameters::DBTYPE_GENERIC_DB);
     hdrwriter.open();
     Debug::Progress progress(reader.getSize());
+    unsigned int match_idx = 0;
 
 #pragma omp parallel
     {
@@ -119,7 +120,6 @@ int Aggregation::runWithHeader() {
         buffer.reserve(10 * 1024);
         std::string header;
         header.reserve(1024);
-        unsigned int match_idx = 0;
 
         std::map<unsigned int, std::vector<std::vector<std::string>>> dataToMerge;
 #pragma omp for
