@@ -42,6 +42,7 @@ public:
     PARAMETER(PARAM_FILE_EXCLUDE)
     PARAMETER(PARAM_GFF_DIR)
     PARAMETER(PARAM_FOLDSEEK_PATH)
+    PARAMETER(PARAM_RELATED_IDENTITY)
 
     int clusterSearchMode;
     float pMHThr;
@@ -56,6 +57,7 @@ public:
     std::string fileInclude;
     std::string fileExclude;
     std::string foldseekPath;
+    float relatedIdentity;
 
     static std::string getAbsExePath();
 
@@ -73,7 +75,8 @@ public:
         PARAM_FILE_INCLUDE(PARAM_FILE_INCLUDE_ID, "--file-include", "File Inclusion Regex", "Include file names based on this regex", typeid(std::string), (void *) &fileInclude, "^.*$"),
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
         PARAM_GFF_DIR(PARAM_GFF_DIR_ID, "--gff-dir", "gff dir file", "Path to gff dir file", typeid(std::string), (void *) &gffDir, ""),
-        PARAM_FOLDSEEK_PATH(PARAM_FOLDSEEK_PATH_ID, "--foldseek-path", "Path to Foldseek", "Path to Foldseek binary", typeid(std::string), (void *) &foldseekPath, "")
+        PARAM_FOLDSEEK_PATH(PARAM_FOLDSEEK_PATH_ID, "--foldseek-path", "Path to Foldseek", "Path to Foldseek binary", typeid(std::string), (void *) &foldseekPath, ""),
+        PARAM_RELATED_IDENTITY(PARAM_RELATED_IDENTITY_ID, "--related-identity", "Related genome identity", "Down-weight clusters between genomes with mean best-hit identity above this value (1: off)", typeid(float), (void *) &relatedIdentity, "^(0(\\.[0-9]+)?|1(\\.0+)?)$")
     {
 
         // clusterhits
@@ -84,6 +87,7 @@ public:
         clusterhits.push_back(&PARAM_CLUSTER_USE_WEIGHT);
         clusterhits.push_back(&PARAM_DB_OUTPUT);
         clusterhits.push_back(&PARAM_ALPHA);
+        clusterhits.push_back(&PARAM_RELATED_IDENTITY);
         clusterhits.push_back(&PARAM_THREADS);
         clusterhits.push_back(&PARAM_COMPRESSED);
         clusterhits.push_back(&PARAM_V);
@@ -163,6 +167,7 @@ public:
         fileExclude = "^$";
         gffDir = "";
         std::string binaryDir = FileUtil::dirName(getAbsExePath());
+        relatedIdentity = 1.0;
         foldseekPath =  binaryDir.empty() ? "foldseek" : binaryDir + "/foldseek";
 
         //TODO: add citations (foldseek & mmseqs & clustersearch)

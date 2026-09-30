@@ -66,6 +66,7 @@ struct hit{
     const char* alignment;
     size_t alignmentLen;
     double pval;
+    float seqId;
     unsigned int qPos;
     unsigned int tPos;
     bool qStrand;
@@ -324,6 +325,7 @@ unsigned int cluster_idx = 0;
                 tmpHit.alignment = entry[0];
                 tmpHit.alignmentLen = data - entry[0];
                 tmpHit.pval = std::strtod(entry[2], NULL);
+                tmpHit.seqId = std::strtof(entry[3], NULL);
                 tmpHit.qPos = Util::fast_atoi<size_t>(qcolumns[qcolumns.size()-3].c_str());
                 tmpHit.tPos = Util::fast_atoi<size_t>(tcolumns[tcolumns.size()-3].c_str());
                 tmpHit.qStrand = (qStart < qEnd) ? 1 : 0;
@@ -338,6 +340,30 @@ unsigned int cluster_idx = 0;
 
             if(K <= 1){
                 continue;
+            }
+
+            //probability that two neighboring genes are still neighbors, from the mean identity of the best hit of each query gene
+            double neighborKept = 0.0;
+            if (par.relatedIdentity < 1.0) {
+                std::vector<const hit*> best;
+                best.reserve(match.size());
+                for (size_t h = 0; h < match.size(); h++) {
+                    best.push_back(&match[h]);
+                }
+                std::sort(best.begin(), best.end(), [](const hit* a, const hit* b) {
+                    return (a->qPos < b->qPos) || (a->qPos == b->qPos && a->pval < b->pval);
+                });
+                double sumId = 0.0;
+                size_t genes = 0;
+                for (size_t h = 0; h < best.size(); h++) {
+                    if (h == 0 || best[h]->qPos != best[h - 1]->qPos) {
+                        sumId += best[h]->seqId;
+                        genes++;
+                    }
+                }
+                const double meanId = sumId / genes;
+                const double s0 = par.relatedIdentity;
+                neighborKept = std::max(0.0, (meanId - s0) / (1.0 - s0));
             }
 
             //initiallize distance matrix to be [K][K]
@@ -446,6 +472,14 @@ unsigned int cluster_idx = 0;
                         cluster.push_back(match[nodes[i][j]]);
                     }
                     double pCO = exp(-clusterMatchScore(lGammaLookup, cluster));
+                    if (neighborKept > 0.0) {
+                        //close relatives can share the gene order from first to last hit by descent
+                        //cluster is already incidentally sorted by clusterMatchScore/findConservedPairs
+                        //take min/max qPos to not rely on incidental behavior
+                        std::pair<std::vector<hit>::iterator, std::vector<hit>::iterator> span = std::minmax_element(cluster.begin(), cluster.end());
+                        double notScrambled = pow(neighborKept, span.second->qPos - span.first->qPos);
+                        pCO = 1.0 - (1.0 - notScrambled) * (1.0 - pCO);
+                    }
                     double pMH = multihitPval(lGammaLookup, cluster, Nq, par.alpha);
                     if(pCO <= par.pCluThr && (pMH <= par.pMHThr)){
                         headerBuffer.append(SSTR(qSet));
