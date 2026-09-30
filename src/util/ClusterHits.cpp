@@ -291,7 +291,7 @@ unsigned int cluster_idx = 0;
 
         const unsigned int d = par.maxGeneGaps; //par.maxGeneGaps, d is the maximum number of genes allowed between two clusters to merge
         const unsigned int cls = par.clusterSize;
-#pragma omp for schedule(dynamic, 10)
+#pragma omp for schedule(static)
         for (size_t i = 0; i < resultReader.getSize(); ++i) {
             progress.updateProgress();
 
@@ -498,6 +498,12 @@ unsigned int cluster_idx = 0;
     }
     headerWriter.close(true);
     resultReader.close();
+
+    // make the cluster keys stable
+    if (isDb && par.threads > 1) {
+        DBWriter::createRenumberedDB(par.hdr4, par.hdr4Index, "", "", DBReader<unsigned int>::SORT_BY_OFFSET);
+        DBWriter::createRenumberedDB(par.db4, par.db4Index, "", "", DBReader<unsigned int>::SORT_BY_OFFSET);
+    }
     headerReader.close();
 
 
