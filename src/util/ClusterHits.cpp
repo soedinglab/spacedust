@@ -63,7 +63,8 @@ double logGamma(double x){
 }
 
 struct hit{
-    std::string alignment;
+    const char* alignment;
+    size_t alignmentLen;
     double pval;
     unsigned int qPos;
     unsigned int tPos;
@@ -133,51 +134,28 @@ double clusterMatchScore(double* lookup, std::vector<hit> &cluster){
     }
 }
 
-//TODO: make this step more efficient
-bool isCompatibleCluster(std::vector<hit> &cluster1, std::vector<hit> &cluster2, unsigned int d){
-    unsigned int iMax1 = 0;
-    unsigned int iMin1 = INT_MAX;
-    unsigned int jMax1 = 0;
-    unsigned int jMin1 = INT_MAX;
-    for (size_t l = 0; l < cluster1.size(); l++){
-        iMax1 = (cluster1[l].qPos > iMax1) ? cluster1[l].qPos : iMax1;
-        iMin1 = (cluster1[l].qPos < iMin1) ? cluster1[l].qPos : iMin1;
-        jMax1 = (cluster1[l].tPos > jMax1) ? cluster1[l].tPos : jMax1;
-        jMin1 = (cluster1[l].tPos < jMin1) ? cluster1[l].tPos : jMin1;
-    }
-    unsigned int iMax2 = 0;
-    unsigned int iMin2 = INT_MAX;
-    unsigned int jMax2 = 0;
-    unsigned int jMin2 = INT_MAX;
-    for (size_t l = 0; l < cluster2.size(); l++){
-        iMax2 = (cluster2[l].qPos > iMax2) ? cluster2[l].qPos : iMax2;
-        iMin2 = (cluster2[l].qPos < iMin2) ? cluster2[l].qPos : iMin2;
-        jMax2 = (cluster2[l].tPos > jMax2) ? cluster2[l].tPos : jMax2;
-        jMin2 = (cluster2[l].tPos < jMin2) ? cluster2[l].tPos : jMin2;
-    }
-    return (std::min(jMin1-jMax2,jMin2-jMax1) <= d && std::min(iMin1-iMax2,iMin2-iMax1) <= d);
+struct bounds{
+    unsigned int iMin;
+    unsigned int iMax;
+    unsigned int jMin;
+    unsigned int jMax;
+};
+
+bool isCompatibleCluster(const bounds &b1, const bounds &b2, unsigned int d){
+    return (std::min(b1.jMin-b2.jMax,b2.jMin-b1.jMax) <= d && std::min(b1.iMin-b2.iMax,b2.iMin-b1.iMax) <= d);
 }
 
-
-std::vector<hit> groupNodes(const std::vector<std::vector<int>> &nodeList, const std::vector<hit> &matchList, int i, int j, unsigned int d){
-    std::vector<hit> cluster1;
-    std::vector<hit> cluster2;
-    std::vector<hit> cluster;
+void groupNodes(const std::vector<std::vector<int>> &nodeList, const std::vector<bounds> &boundsList, const std::vector<hit> &matchList, int i, int j, unsigned int d, std::vector<hit> &cluster){
+    cluster.clear();
     //check if one node is empty or two nodes are incompatible, if so return an empty cluster
-    if(nodeList[i].size() != 0 && nodeList[j].size() != 0 ){
+    if(nodeList[i].size() != 0 && nodeList[j].size() != 0 && isCompatibleCluster(boundsList[i], boundsList[j], d)){
         for(size_t m = 0; m < nodeList[i].size(); m++){
-            cluster1.push_back(matchList[nodeList[i][m]]);
+            cluster.push_back(matchList[nodeList[i][m]]);
         }
         for(size_t n = 0; n < nodeList[j].size(); n++){
-            cluster2.push_back(matchList[nodeList[j][n]]);
-        }
-        if(isCompatibleCluster(cluster1,cluster2,d)){
-            cluster.insert(cluster.begin(), cluster1.begin(), cluster1.end());
-            cluster.insert(cluster.end(), cluster2.begin(), cluster2.end());
+            cluster.push_back(matchList[nodeList[j][n]]);
         }
     }
-
-    return cluster;
 }
 
 
@@ -287,6 +265,7 @@ unsigned int cluster_idx = 0;
         header.reserve(1024);
 
         const char *entry[255];
+        std::vector<hit> tmpCluster;
         
 
         const unsigned int d = par.maxGeneGaps; //par.maxGeneGaps, d is the maximum number of genes allowed between two clusters to merge
@@ -342,7 +321,8 @@ unsigned int cluster_idx = 0;
                 hit tmpHit;
 
                 //pos is the protein index in the genome, strand is determined by start and end coordinates
-                tmpHit.alignment = std::string(entry[0], data - entry[0]);
+                tmpHit.alignment = entry[0];
+                tmpHit.alignmentLen = data - entry[0];
                 tmpHit.pval = std::strtod(entry[2], NULL);
                 tmpHit.qPos = Util::fast_atoi<size_t>(qcolumns[qcolumns.size()-3].c_str());
                 tmpHit.tPos = Util::fast_atoi<size_t>(tcolumns[tcolumns.size()-3].c_str());
@@ -369,9 +349,11 @@ unsigned int cluster_idx = 0;
 
             std::vector<int> dmin(K); //index of closest cluster/highest score
             std::vector<std::vector<int>> nodes(K);
+            std::vector<bounds> nodeBounds(K);
             //assign each node with the index of the singleton cluster
             for(size_t n = 0; n < K; n++){
                 nodes[n].push_back(n);
+                nodeBounds[n] = { match[n].qPos, match[n].qPos, match[n].tPos, match[n].tPos };
             }
 
             for(size_t i = 0; i < K; i++){
@@ -380,7 +362,7 @@ unsigned int cluster_idx = 0;
                         DistMat[i][j] = 0.0; //set score = 0 to self similarities
                     }
                     else{
-                        std::vector<hit> tmpCluster = groupNodes(nodes,match,i,j,d);
+                        groupNodes(nodes,nodeBounds,match,i,j,d,tmpCluster);
                         DistMat[i][j] = clusterMatchScore(lGammaLookup,tmpCluster);//score(i,j)
                     }
                     dmin[i] = (DistMat[i][j] > DistMat[i][dmin[i]]) ? j : dmin[i];
@@ -417,6 +399,10 @@ unsigned int cluster_idx = 0;
                     nodes[i1].push_back(nodes[i2][n]);
                 }
                 nodes[i2].clear();
+                nodeBounds[i1].iMin = std::min(nodeBounds[i1].iMin, nodeBounds[i2].iMin);
+                nodeBounds[i1].iMax = std::max(nodeBounds[i1].iMax, nodeBounds[i2].iMax);
+                nodeBounds[i1].jMin = std::min(nodeBounds[i1].jMin, nodeBounds[i2].jMin);
+                nodeBounds[i1].jMax = std::max(nodeBounds[i1].jMax, nodeBounds[i2].jMax);
 
 
                 //overwrite row and column i1 with dist[i1,i2][j]
@@ -426,7 +412,7 @@ unsigned int cluster_idx = 0;
                         DistMat[j][i1] = 0.0; 
                     }
                     else{
-                        std::vector<hit> tmpCluster = groupNodes(nodes,match,i1,j,d);
+                        groupNodes(nodes,nodeBounds,match,i1,j,d,tmpCluster);
                         DistMat[i1][j] = clusterMatchScore(lGammaLookup,tmpCluster);
                         DistMat[j][i1] = DistMat[i1][j];
                     }
@@ -473,7 +459,7 @@ unsigned int cluster_idx = 0;
                         headerBuffer.append(SSTR(cluster.size()));
                         headerBuffer.append("\n");
                         for(size_t i = 0; i < cluster.size(); i++){
-                            buffer.append(cluster[i].alignment);
+                            buffer.append(cluster[i].alignment, cluster[i].alignmentLen);
                         }
                     unsigned int key = __sync_fetch_and_add(&(cluster_idx), 1);
                     writer.writeData(buffer.c_str(), buffer.length(), key, thread_idx,isDb);
