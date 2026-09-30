@@ -336,7 +336,7 @@ unsigned int cluster_idx = 0;
             //int K = Util::fast_atoi<int>(hdrcolumns[3].c_str());//total number of hits
             size_t K = match.size(); 
 
-            if(K == 1){
+            if(K <= 1){
                 continue;
             }
 
