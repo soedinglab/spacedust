@@ -5,6 +5,7 @@
 #include "DBReader.h"
 #include "CommandCaller.h"
 #include "PatternCompiler.h"
+#include "FastSort.h"
 
 #include "createsetdb.sh.h"
 
@@ -95,6 +96,8 @@ int createsetdb(int argc, const char **argv, const Command &command) {
             }
             closedir(handle);
         }
+        // Sort to make reproducible
+        SORT_SERIAL(par.filenames.begin(), par.filenames.end());
     } else if (Util::endsWith(".tsv", par.filenames[0])) {
         if (par.filenames.size() > 1) {
             Debug(Debug::ERROR) << "Only one tsv file can be given\n";
