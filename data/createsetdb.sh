@@ -67,6 +67,10 @@ else
     touch "${TMP_PATH}/seqDB.external"
 fi
 
+if [ ! -s "${TMP_PATH}/seqDB.index" ]; then
+    fail "Sequence database ${TMP_PATH}/seqDB is empty. Check the input."
+fi
+
 if [ "$("${MMSEQS}" dbtype "${TMP_PATH}/seqDB")" = "Nucleotide" ]; then
 
     echo "Input DB type is Nucleotide."
