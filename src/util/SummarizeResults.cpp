@@ -57,7 +57,7 @@ int summarizeresults(int argc, const char **argv, const Command& command) {
         std::string tmpBuffer;
         tmpBuffer.reserve(1024 * 1024);
 
-#pragma omp for schedule(dynamic, 10)
+#pragma omp for schedule(static)
         for (size_t id = 0; id < hdrReader.getSize(); ++id) {
             progress.updateProgress();
 
