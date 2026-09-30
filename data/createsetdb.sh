@@ -38,10 +38,11 @@ OUTDB="$(abspath "${OUTDB}")"
 
 #check if already created db
 if notExists "${1}.dbtype"; then
-    # shellcheck disable=SC2086
-    "${MMSEQS}" createdb "$@" "${TMP_PATH}/seqDB" ${CREATEDB_PAR} \
-        || fail "createdb failed"
-        
+    if notExists "${TMP_PATH}/seqDB.dbtype"; then
+        # shellcheck disable=SC2086
+        "${MMSEQS}" createdb "$@" "${TMP_PATH}/seqDB" ${CREATEDB_PAR} \
+            || fail "createdb failed"
+    fi
 else
     echo "Input DB already exists. Generating associated metadata."
 
