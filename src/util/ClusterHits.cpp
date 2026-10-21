@@ -342,7 +342,7 @@ unsigned int cluster_idx = 0;
                 continue;
             }
 
-            //probability that two neighboring genes are still neighbors, from the mean identity of the best hit of each query gene
+            //probability that two neighboring genes are still neighbors, from the median identity of the best hit of each query gene
             double neighborKept = 0.0;
             if (par.relatedIdentity < 1.0) {
                 std::vector<const hit*> best;
@@ -353,17 +353,19 @@ unsigned int cluster_idx = 0;
                 std::sort(best.begin(), best.end(), [](const hit* a, const hit* b) {
                     return (a->qPos < b->qPos) || (a->qPos == b->qPos && a->pval < b->pval);
                 });
-                double sumId = 0.0;
-                size_t genes = 0;
+                std::vector<float> ids;
+                ids.reserve(best.size());
                 for (size_t h = 0; h < best.size(); h++) {
                     if (h == 0 || best[h]->qPos != best[h - 1]->qPos) {
-                        sumId += best[h]->seqId;
-                        genes++;
+                        ids.push_back(best[h]->seqId);
                     }
                 }
-                const double meanId = sumId / genes;
+                //median instead of mean, query genes without an ortholog hit distant homologs and pull the mean down
+                std::sort(ids.begin(), ids.end());
+                const size_t mid = ids.size() / 2;
+                const double medianId = (ids.size() % 2 == 1) ? ids[mid] : 0.5 * (ids[mid - 1] + ids[mid]);
                 const double s0 = par.relatedIdentity;
-                neighborKept = std::max(0.0, (meanId - s0) / (1.0 - s0));
+                neighborKept = std::max(0.0, (medianId - s0) / (1.0 - s0));
             }
 
             //initiallize distance matrix to be [K][K]
