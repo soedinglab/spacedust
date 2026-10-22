@@ -43,6 +43,8 @@ public:
     PARAMETER(PARAM_GFF_DIR)
     PARAMETER(PARAM_FOLDSEEK_PATH)
     PARAMETER(PARAM_RELATED_IDENTITY)
+    PARAMETER(PARAM_RELATED_EXPONENT)
+    PARAMETER(PARAM_RELATED_SPAN_EXPONENT)
 
     int clusterSearchMode;
     float pMHThr;
@@ -58,6 +60,8 @@ public:
     std::string fileExclude;
     std::string foldseekPath;
     float relatedIdentity;
+    float relatedExponent;
+    float relatedSpanExponent;
 
     static std::string getAbsExePath();
 
@@ -76,7 +80,9 @@ public:
         PARAM_FILE_EXCLUDE(PARAM_FILE_EXCLUDE_ID, "--file-exclude", "File Exclusion Regex", "Exclude file names based on this regex", typeid(std::string), (void *) &fileExclude, "^.*$"),
         PARAM_GFF_DIR(PARAM_GFF_DIR_ID, "--gff-dir", "gff dir file", "Path to gff dir file", typeid(std::string), (void *) &gffDir, ""),
         PARAM_FOLDSEEK_PATH(PARAM_FOLDSEEK_PATH_ID, "--foldseek-path", "Path to Foldseek", "Path to Foldseek binary", typeid(std::string), (void *) &foldseekPath, ""),
-        PARAM_RELATED_IDENTITY(PARAM_RELATED_IDENTITY_ID, "--related-identity", "Related genome identity", "Down-weight clusters between genomes with median best-hit identity above this value (1: off)", typeid(float), (void *) &relatedIdentity, "^(0(\\.[0-9]+)?|1(\\.0+)?)$")
+        PARAM_RELATED_IDENTITY(PARAM_RELATED_IDENTITY_ID, "--related-identity", "Related genome identity", "Down-weight clusters between genomes with median best-hit identity above this value (1: off)", typeid(float), (void *) &relatedIdentity, "^(0(\\.[0-9]+)?|1(\\.0+)?)$"),
+        PARAM_RELATED_EXPONENT(PARAM_RELATED_EXPONENT_ID, "--related-exponent", "Related identity exponent a", "Exponent a in P_ancestry = u^(a * span^b); larger a = weaker correction (default 2; 0.5 with b = 1 gives u^(span/2))", typeid(float), (void *) &relatedExponent, "^[0-9]+(\\.[0-9]+)?$"),
+        PARAM_RELATED_SPAN_EXPONENT(PARAM_RELATED_SPAN_EXPONENT_ID, "--related-span-exponent", "Related identity span exponent b", "Exponent b in P_ancestry = u^(a * span^b); b < 1 keeps long clusters suspect for longer (default 0.8; 1 with a = 0.5 gives u^(span/2))", typeid(float), (void *) &relatedSpanExponent, "^[0-9]+(\\.[0-9]+)?$")
     {
 
         // clusterhits
@@ -88,6 +94,8 @@ public:
         clusterhits.push_back(&PARAM_DB_OUTPUT);
         clusterhits.push_back(&PARAM_ALPHA);
         clusterhits.push_back(&PARAM_RELATED_IDENTITY);
+        clusterhits.push_back(&PARAM_RELATED_EXPONENT);
+        clusterhits.push_back(&PARAM_RELATED_SPAN_EXPONENT);
         clusterhits.push_back(&PARAM_THREADS);
         clusterhits.push_back(&PARAM_COMPRESSED);
         clusterhits.push_back(&PARAM_V);
@@ -168,6 +176,8 @@ public:
         gffDir = "";
         std::string binaryDir = FileUtil::dirName(getAbsExePath());
         relatedIdentity = 1.0;
+        relatedExponent = 2.0f;
+        relatedSpanExponent = 0.8f;
         foldseekPath =  binaryDir.empty() ? "foldseek" : binaryDir + "/foldseek";
 
         //TODO: add citations (foldseek & mmseqs & clustersearch)
