@@ -479,7 +479,10 @@ unsigned int cluster_idx = 0;
                         //cluster is already incidentally sorted by clusterMatchScore/findConservedPairs
                         //take min/max qPos to not rely on incidental behavior
                         std::pair<std::vector<hit>::iterator, std::vector<hit>::iterator> span = std::minmax_element(cluster.begin(), cluster.end());
-                        logP = std::max(logP, 0.5 * (span.second->qPos - span.first->qPos) * log(neighborKept));
+                        // ancestry term P = u^(a * span^b); a = 0.5, b = 1 is u^(span/2)
+                        const double spanLen = (double) (span.second->qPos - span.first->qPos);
+                        const double expo = (double) par.relatedExponent * pow(spanLen, (double) par.relatedSpanExponent);
+                        logP = std::max(logP, expo * log(neighborKept));
                     }
                     double pCO = exp(logP);
                     double pMH = multihitPval(lGammaLookup, cluster, Nq, par.alpha);
